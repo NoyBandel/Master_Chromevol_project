@@ -98,9 +98,28 @@ def preprocessing_summary(families_for_analysis_file: Path, preprocessing_dir: P
             f.write(f"{col}:\n")
             f.write(f"  min     = {series.min()}\n")
             f.write(f"  max     = {series.max()}\n")
-            f.write(f"  average = {series.mean()}\n\n")
+            f.write(f"  average = {series.mean()}\n")
+            f.write(f"  median = {series.median()}\n\n")
 
         f.write("Global counts:\n")
         f.write(f"  number of families = {len(analysis_families_df)}\n")
+        f.write(
+            f"  total number of species = "
+            f"{int(pd.to_numeric(analysis_families_df[FAMILY_SIZE_COL], errors='coerce').sum())}\n"
+        )
+
+def find_species_with_extreme_chr_num(extreme_type: str,families_for_analysis_csv_file: Path,database_chr_count_input: Path,preprocessing_dir: Path,) -> None:
+    if extreme_type not in {"min", "max"}:
+        raise ValueError("extreme_type must be 'min' or 'max'")
+    families_df = pd.read_csv(families_for_analysis_csv_file)
+
+    extreme_col, extreme_value, header_line = min_max_pars(extreme_type, families_df, MIN_CHROM_COL, MAX_CHROM_COL)
+    families_df[extreme_col] = pd.to_numeric(families_df[extreme_col], errors="coerce")
+    extreme_rows: pd.DataFrame = families_df.loc[families_df[extreme_col] == extreme_value].copy()
+
+    preprocessing_dir.mkdir(parents=True, exist_ok=True)
+    out_path = preprocessing_dir / f"{extreme_type}_chrom_species.txt"
+    write_species_with_extreme_chr_num_file(out_path, header_line, extreme_rows, FAMILY_NAME_COL, database_chr_count_input, CHROM_COUNTS_FILE_NAME, extreme_value)
+
 
 
