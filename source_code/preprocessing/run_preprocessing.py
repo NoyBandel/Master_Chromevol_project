@@ -1,8 +1,7 @@
 import argparse
-from pathlib import Path
 
-from .preprocessing_families import *
-from ..logger import log_run
+from source_code.preprocessing.preprocessing_families import *
+from source_code.logger import log_run
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Preprocessing pipeline runner")

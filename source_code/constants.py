@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict
 
 # -------- paths --------
+PROJECT_ROOT: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project")
 LOGS_ROOT: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/logs/")
 
 DATABASE_INPUT_DIR: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/input_data/families_chrom_input/")
@@ -11,12 +12,12 @@ PLOIDB_BY_FAMILY_FILE: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromE
 PLOIDB_BY_GENUS_FILE: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/input_data/ploidb_by_genus_without_missing.csv")
 
 CHROMEVOL_RAW_RESULTS_ROOT: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/chromevol_raw_results/")
+
 CHROMEVOL_EXE: Path = Path("/groups/itay_mayrose/noybandel/ChromEvol_project/chromevol_program/chromevol/ChromEvol/chromEvol")
 CONDA_ENV: Path = Path("source /groups/itay_mayrose/noybandel/miniconda3/etc/profile.d/conda.sh; conda activate chromevol")
 CONDA_EXPORT: Path = Path("export LD_LIBRARY_PATH=/groups/itay_mayrose/noybandel/miniconda3/envs/chromevol/lib:$LD_LIBRARY_PATH\n")
 
-RAW_RESULTS_DIR = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/chromevol_raw_results/")
-
+PREPARE_AND_SUBMIT_CHROMEVOL_PY_FILE = Path("source_code/chromevol_run/prepare_and_submit_chromevol_jobs_for_families.py")
 
 # -------- preprocessing --------
 # columns

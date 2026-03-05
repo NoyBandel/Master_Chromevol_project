@@ -1,10 +1,8 @@
 from datetime import datetime
 from typing import Any
-
 from .constants import *
 
-
-def log_run(step: str, script: Path, params: dict[str, Any], outputs: list[str], description: str, notes: str | None = None) -> None:
+def log_run(step: str, script: Path, params: dict[str, Any], outputs: list[str], description: str, notes: str = "", step_extension: str = "") -> None:
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     # --- project log ---
@@ -18,7 +16,7 @@ def log_run(step: str, script: Path, params: dict[str, Any], outputs: list[str],
     # --- step log ---
     step_dir = LOGS_ROOT / step
     step_dir.mkdir(parents=True, exist_ok=True)
-    step_log = step_dir / f"{step}.log"
+    step_log = step_dir / f"{step}{step_extension}.log"
 
     block = []
     block.append("=" * 80)

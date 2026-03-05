@@ -1,9 +1,14 @@
-from subprocess import Popen
-from ..constants import *
+from subprocess import run
+from typing import Optional
+from source_code.constants import *
 
-def general_job_format(job_folder_path: str, job_name: str, cmd: str, memory: str = "4G", ncpu: int="1") -> str:
+def general_job_format(job_folder_path: str, job_name: str, cmd: str, memory: str = "4G", ncpu: str="1", workdir: Optional[Path] = None) -> str:
+    out_path = f"{job_folder_path}/{job_name}_out.OU"
+    err_path = f"{job_folder_path}/{job_name}_err.ER"
+    cd_path = workdir if workdir else job_folder_path
+
     text = ""
-    text += f"#!/bin/bash\n\n"
+    text += "#!/bin/bash\n\n"
     text += f"#SBATCH --job-name={job_name}\n"
     text += f"#SBATCH --account=itaym-users_v2\n"
     text += f"#SBATCH --partition=itaym-pool\n"
@@ -11,21 +16,33 @@ def general_job_format(job_folder_path: str, job_name: str, cmd: str, memory: st
     text += f"#SBATCH --cpus-per-task=1\n"
     text += f"#SBATCH --time=7-00:00:00\n"
     text += f"#SBATCH --mem-per-cpu={memory}\n"
-    text += f"#SBATCH --output={job_folder_path}/{job_name}_out.OU\n"
-    text += f"#SBATCH --error={job_folder_path}/{job_name}_err.ER\n"
-    text += f"cd {job_folder_path}\n"
-    text += f"{cmd}\n"
+    text += f'#SBATCH --output="{out_path}"\n'
+    text += f'#SBATCH --error="{err_path}"\n\n'
+
+    text += f'cd "{cd_path}"\n'
+    text += cmd + "\n"
+
     return text
 
 def build_job_script_for_chromevol_run(job_folder_path: Path, job_name: str, param_file_path: str) -> str:
     log_file = job_folder_path / "log.txt"
     err_file = job_folder_path / "ERR.txt"
-    cmd = f'{CONDA_ENV}\n{CONDA_EXPORT}{CHROMEVOL_EXE} "param={param_file_path}" > {log_file} 2> {err_file}\n'
+    cmd = f"""{CONDA_ENV}{CONDA_EXPORT}echo "START $(date)" > {log_file}/usr/bin/time -v {CHROMEVOL_EXE} "param={param_file_path}" >> {log_file} 2>> {err_file}echo "END $(date)" >> {log_file}"""
     job_content = general_job_format(str(job_folder_path), job_name, cmd)
     return job_content
 
-def general_submit_job(job_path: Path, job_name: str, content: str) -> None:
-    with open(job_path, 'w') as f:
+def general_submit_job(job_path: Path, job_name: str, content: str) -> str:
+    with open(job_path, "w") as f:
         f.write(content)
-    Popen(["sbatch", str(job_path)])
-    print(f"[→] Submitting job: {job_name}")
+
+    result = run(["sbatch", str(job_path)], capture_output=True, text=True)
+
+    if result.returncode != 0:
+        error_msg = result.stderr.strip()
+        print(f"[✗] Job submission failed | {job_name} | {job_path}")
+        print(f"    Error: {error_msg}")
+        return error_msg
+
+    job_id = result.stdout.strip().split()[-1]
+    print(f"[→] Job submitted: {job_id}  |  {job_name}  |  {job_path}")
+    return job_id

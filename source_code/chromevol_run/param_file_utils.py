@@ -1,7 +1,7 @@
-from typing import Dict, Optional, List, Tuple
+from typing import Optional, List
 import random
 import pandas as pd
-from ..constants import *
+from source_code.constants import *
 
 def parse_init_values_str(init_values_str: str, *, transition: str) -> List[float]:
     raw_parts: List[str] = init_values_str.split(",")
@@ -70,9 +70,8 @@ def validate_transition_and_start_points(transition_to_function_dict: Dict[str, 
 def build_param_file_content(dataFile_path: str, treeFile_path: str, resultsPathDir_path: str,
                              config_df: pd.DataFrame, base_num_init,
                              optimizePointsNum: str = "10,3,1", optimizeIterNum: str = "0,2,5", seed: Optional[int] = None) -> str:
-
-    transition_to_function_dict: Dict[str, str] = config_df.to  dict with keys CE_TRANSITION_COL and values are CE_FUNC_TYPE_COL
-    init_transition_to_val_dict = config_df.to dictwith keys CE_TRANSITION_INIT_COL and values are CE_PARAMS_COL
+    transition_to_function_dict: Dict[str, str] = (config_df.set_index(CE_TRANSITION_COL)[CE_FUNC_TYPE_COL].to_dict())
+    init_transition_to_val_dict: Dict[str, str] = (config_df.set_index(CE_TRANSITION_INIT_COL)[CE_PARAMS_COL].to_dict())
     if seed is None:
         seed = random.randint(1, 8000)
 
