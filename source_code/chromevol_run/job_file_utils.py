@@ -27,7 +27,17 @@ def general_job_format(job_folder_path: str, job_name: str, cmd: str, memory: st
 def build_job_script_for_chromevol_run(job_folder_path: Path, job_name: str, param_file_path: str) -> str:
     log_file = job_folder_path / "log.txt"
     err_file = job_folder_path / "ERR.txt"
-    cmd = f"""{CONDA_ENV}{CONDA_EXPORT}echo "START $(date)" > {log_file}/usr/bin/time -v {CHROMEVOL_EXE} "param={param_file_path}" >> {log_file} 2>> {err_file}echo "END $(date)" >> {log_file}"""
+
+    cmd = ""
+    cmd += f"{CONDA_ENV}\n"
+    cmd += f"{CONDA_EXPORT}\n"
+    cmd += f'echo "START $(date)" > "{log_file}"\n'
+    cmd += 'start_ts=$(date +%s)\n'
+    cmd += f'{CHROMEVOL_EXE} "param={param_file_path}" >> "{log_file}" 2>> "{err_file}"\n'
+    cmd += 'end_ts=$(date +%s)\n'
+    cmd += 'echo "END $(date)" >> "{log_file}"\n'
+    cmd += 'echo "DURATION_SEC=$((end_ts - start_ts))" >> "{log_file}"\n'
+
     job_content = general_job_format(str(job_folder_path), job_name, cmd)
     return job_content
 

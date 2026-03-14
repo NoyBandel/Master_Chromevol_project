@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 # -------- paths --------
 PROJECT_ROOT: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project")
@@ -18,6 +18,12 @@ CONDA_ENV: Path = Path("source /groups/itay_mayrose/noybandel/miniconda3/etc/pro
 CONDA_EXPORT: Path = Path("export LD_LIBRARY_PATH=/groups/itay_mayrose/noybandel/miniconda3/envs/chromevol/lib:$LD_LIBRARY_PATH\n")
 
 PREPARE_AND_SUBMIT_CHROMEVOL_PY_FILE = Path("source_code/chromevol_run/prepare_and_submit_chromevol_jobs_for_families.py")
+
+
+PARSED_RESULTS_ROOT = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/chromevol_parsed_results/")
+
+MODEL_SPECIFIC_CONFIG_ROOT: Path = PROJECT_ROOT / "model_specific_configuration_files"
+
 
 # -------- preprocessing --------
 # columns
@@ -50,9 +56,9 @@ CE_FUNCTIONS = [CE_IGNORE, CE_CONSTANT, CE_LINEAR, CE_EXP, CE_LOGNORMAL]
 CE_GAIN = "_gainFunc"
 CE_LOSS = "_lossFunc"
 CE_DUPL = "_duplFunc"
-CE_DEMI_DUPL = "_demiDuplFunc"
+CE_DEMI = "_demiDuplFunc"
 CE_BASE_NUM = "_baseNumRFunc"
-CE_TRANSITIONS_ORDERED = (CE_GAIN, CE_LOSS, CE_DUPL, CE_DEMI_DUPL, CE_BASE_NUM)
+CE_TRANSITIONS_ORDERED = (CE_GAIN, CE_LOSS, CE_DUPL, CE_DEMI, CE_BASE_NUM)
 
 # cheomevol transitions names for initialization
 CE_GAIN_INIT = "_gain_1"
@@ -73,13 +79,11 @@ CE_TRANSITIONS_TO_INIT = {
     CE_GAIN: CE_GAIN_INIT,
     CE_LOSS: CE_LOSS_INIT,
     CE_DUPL: CE_DUPL_INIT,
-    CE_DEMI_DUPL: CE_DEMI_INIT,
+    CE_DEMI: CE_DEMI_INIT,
     CE_BASE_NUM: CE_BASE_NUM_R_INIT
 }
 
 CE_INIT_TO_TRANSITIONS = {v: k for k, v in CE_TRANSITIONS_TO_INIT.items()}
-
-
 
 # -------- labels --------
 # config df columns
@@ -91,12 +95,12 @@ CE_TRANSITION_INIT_COL = "chromevol_transition_init"
 CE_PARAMS_COL = "chromevol_parameters"
 CONFIG_DF_COLS = [LABEL_TRANSITION_COL, LABEL_FUNC_TYPE_COL, CE_TRANSITION_COL, CE_FUNC_TYPE_COL, CE_TRANSITION_INIT_COL, CE_PARAMS_COL]
 
-# analysis functions names - for folders and csv files
+# analysis functions names - for folders
 LABEL_IGNORE = "ignore"
 LABEL_CONSTANT = "constant"
 LABEL_LINEAR = "linear"
 LABEL_EXP = "exponential"
-LABEL_LOGNORMAL = "log-normal"
+LABEL_LOGNORMAL = "log_normal"
 LABEL_FUNCTIONS_LST = [LABEL_IGNORE, LABEL_CONSTANT, LABEL_LINEAR, LABEL_EXP, LABEL_LOGNORMAL]
 
 CE_FUNC_TO_LABEL_FUNC: Dict[str, str] = {
@@ -118,12 +122,93 @@ LABEL_DEMI = "demi"
 LABEL_BASE_NUM = "baseNum"
 LABEL_TRANSITIONS_ORDERED = (LABEL_GAIN, LABEL_LOSS, LABEL_DUPL, LABEL_DEMI, LABEL_BASE_NUM)
 
-
 PARAM_FILE = "paramFile"
 
-# -------- configuration types --------
+# -------- model types --------
 M0_LABEL = "M0_all_const"
-M1_LABEL = "M1_tested_linear_w_M0_init"
+M1_LABEL = "M1"
+M2_LABEL = "M2"
 
-CONFIG_TYPES = [M0_LABEL, M1_LABEL]
+MODEL_TYPES = [
+    M0_LABEL,
+    M1_LABEL,
+    M2_LABEL,
+]
 
+# -------- parse chromevol raw results columns --------
+# FAMILY_NAME_COL
+CONFIG_COL = "configuration"
+LABEL_TESTED_TRANSITION_COL = "label_tested_transition"
+# LABEL_FUNC_TYPE_COL
+ROOT_CHROM_NUM_COL = "root_chrom_num"
+BASE_CHROM_NUM_COL = "base_chrom_num"
+LIKELIHOOD_COL = "likelihood"
+AICC_COL = "AICc"
+
+EXP_GAIN_COL = "exp_events_gain"
+EXP_LOSS_COL = "exp_events_loss"
+EXP_DUPL_COL = "exp_events_dupl"
+EXP_DEMI_COL = "exp_events_demi"
+EXP_BASE_NUM_COL = "exp_events_base_num"
+
+TESTED_TRANSITION_N_PARAMS_COL = "tested_transition_n_params"
+PARAM_0_COL = "param_0"
+PARAM_1_COL = "param_1"
+PARAM_2_COL = "param_2"
+ALL_PARAMS_DICT_STR_COL = "all_params_dict_str"
+
+PARSED_RESULTS_COLS = [FAMILY_NAME_COL, CONFIG_COL, LABEL_TESTED_TRANSITION_COL, LABEL_FUNC_TYPE_COL,
+                       ROOT_CHROM_NUM_COL, BASE_CHROM_NUM_COL, LIKELIHOOD_COL, AICC_COL,
+                       EXP_GAIN_COL, EXP_LOSS_COL, EXP_DUPL_COL, EXP_DEMI_COL, EXP_BASE_NUM_COL,
+                       TESTED_TRANSITION_N_PARAMS_COL, PARAM_0_COL, PARAM_1_COL, PARAM_2_COL, ALL_PARAMS_DICT_STR_COL
+                       ]
+
+CE_EXP_OUTPUT_GAIN = "GAIN"
+CE_EXP_OUTPUT_LOSS = "LOSS"
+CE_EXP_OUTPUT_DUPL = "DUPLICATION"
+CE_EXP_OUTPUT_DEMI = "DEMI-DUPLICATION"
+CE_EXP_OUTPUT_BASE_NUM = "BASE-NUMBER"
+
+CE_OUTPUT_TO_EXP_COL_DICT = {CE_EXP_OUTPUT_GAIN: EXP_GAIN_COL,
+                             CE_EXP_OUTPUT_LOSS: EXP_LOSS_COL,
+                             CE_EXP_OUTPUT_DUPL: EXP_DUPL_COL,
+                             CE_EXP_OUTPUT_DEMI: EXP_DEMI_COL,
+                             CE_EXP_OUTPUT_BASE_NUM: EXP_BASE_NUM_COL,
+                             }
+
+
+CE_RES_OUTPUT_GAIN = "gain"
+CE_RES_OUTPUT_LOSS = "loss"
+CE_RES_OUTPUT_DUPL = "dupl"
+CE_RES_OUTPUT_DEMI = "demi"
+CE_RES_OUTPUT_BASE_NUM = "baseNumR"
+
+TRANSITIONS_LABEL_TO_CE_RES: Dict[str, str] = {LABEL_GAIN: CE_RES_OUTPUT_GAIN,
+                           LABEL_LOSS: CE_RES_OUTPUT_LOSS,
+                           LABEL_DUPL: CE_RES_OUTPUT_DUPL,
+                           LABEL_DEMI: CE_RES_OUTPUT_DEMI,
+                           LABEL_BASE_NUM: CE_RES_OUTPUT_BASE_NUM,
+}
+TRANSITIONS_CE_RES_TO_LABEL: Dict[str, str] = {v: k for k, v in TRANSITIONS_LABEL_TO_CE_RES.items()}
+
+PARSED_RESULTS_FILE_PREFIX: str = "parsed_results"
+
+# -------- use previous runs to generate new run configuration and init parameters --------
+TRANSITIONS_LABEL_TO_CE: Dict[str, str] = {LABEL_GAIN: CE_GAIN,
+                           LABEL_LOSS: CE_LOSS,
+                           LABEL_DUPL: CE_DUPL,
+                           LABEL_DEMI: CE_DEMI,
+                           LABEL_BASE_NUM: CE_BASE_NUM,
+}
+TRANSITIONS_CE_TO_LABEL: Dict[str, str] = {v: k for k, v in TRANSITIONS_LABEL_TO_CE.items()}
+
+TRANSITIONS_LABEL_TO_CE_INIT: Dict[str, str] = {LABEL_GAIN: CE_GAIN_INIT,
+                           LABEL_LOSS: CE_LOSS_INIT,
+                           LABEL_DUPL: CE_DUPL_INIT,
+                           LABEL_DEMI: CE_DEMI_INIT,
+                           LABEL_BASE_NUM: CE_BASE_NUM_R_INIT,
+}
+TRANSITIONS_CE_INIT_TO_LABEL: Dict[str, str] = {v: k for k, v in TRANSITIONS_LABEL_TO_CE_INIT.items()}
+
+MODEL_CONFIG_COLS: List[str] = [FAMILY_NAME_COL, BASE_CHROM_NUM_COL, *LABEL_TRANSITIONS_ORDERED]
+INIT_VALUES_COL = "init_values"

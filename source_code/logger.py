@@ -1,24 +1,34 @@
 from datetime import datetime
-from typing import Any
+from pathlib import Path
+from typing import Any, Optional
 from .constants import *
 
-def log_run(step: str, script: Path, params: dict[str, Any], outputs: list[str], description: str, notes: str = "", step_extension: str = "") -> None:
+def log_run(step: str, script: Path, params: dict[str, Any], outputs: list[str], description: str, notes: str = "", log_relative_path: Optional[Path] = None) -> None:
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    # --- project log ---
-    project_log = LOGS_ROOT / "project.log"
+    # project log
+    project_log: Path = LOGS_ROOT / "project.log"
     project_log.parent.mkdir(parents=True, exist_ok=True)
-    run_mode = params.get("run", "NA")
-    project_log.open("a", encoding="utf-8").write(
-        f"{ts} | {step} | run={run_mode} | {script.name} | {description}\n"
-    )
+    run_mode: Optional[str] = params.get("run", None)
 
-    # --- step log ---
-    step_dir = LOGS_ROOT / step
-    step_dir.mkdir(parents=True, exist_ok=True)
-    step_log = step_dir / f"{step}{step_extension}.log"
+    log: str = f"{ts} | {step} "
+    if run_mode:
+        log += f"| run:{run_mode} "
+    log += f"| {script.name} | {description}\n"
 
-    block = []
+    project_log.open("a", encoding="utf-8").write(log)
+
+    # step log
+    step_dir: Path = LOGS_ROOT / step
+
+    if log_relative_path is None:
+        step_log: Path = step_dir / f"{step}.log"
+    else:
+        step_log = step_dir / log_relative_path
+
+    step_log.parent.mkdir(parents=True, exist_ok=True)
+
+    block: list[str] = []
     block.append("=" * 80)
     block.append(f"DATE        : {ts}")
     block.append(f"SCRIPT      : {script.as_posix()}")
@@ -37,7 +47,6 @@ def log_run(step: str, script: Path, params: dict[str, Any], outputs: list[str],
         block.append("")
         block.append("NOTES:")
         block.append(f"  {notes}")
-
     block.append("")
 
     step_log.open("a", encoding="utf-8").write("\n".join(block))
