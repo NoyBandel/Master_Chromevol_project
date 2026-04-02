@@ -44,7 +44,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    all_families_csv: Path = INPUT_DATA_DIR / ALL_FAMILIES_DATA_SUMMARY_FILE
+    all_families_csv: Path = ALL_FAMILIES_DATA_SUMMARY_FILE
     families_for_analysis_csv: Path = INPUT_DATA_DIR / "families_for_analysis.csv"
     summary_txt: Path = INPUT_DATA_DIR / "families_for_analysis_summary.txt"
     extreme_txt: Path = INPUT_DATA_DIR / f"{args.extreme_type}_chrom_species.txt"

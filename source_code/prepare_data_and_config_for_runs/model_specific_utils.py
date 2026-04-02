@@ -1,15 +1,3 @@
-# -------- M0_all_const --------
-# All transition functions are constant, and all transition init values are set to the default values.
-#
-# -------- M1_{function}_{tested_transition} --------
-# All transition functions are constant and are initialized using the M0 inferred values,
-# except for {tested_transition}, whose function is set to {function} and whose init values are determined by a function-specific initialization rule.
-#
-# -------- M2_{function}_{tested_transition} --------
-# All transition functions other than {tested_transition} are set to their best previously selected function based on comparison among M0 and the relevant M1 models,
-# and are initialized using the corresponding inferred values.
-# The {tested_transition} function is set to {function} and its init values are determined by a function-specific initialization rule.
-
 import json
 from pathlib import Path
 from typing import Any, Dict, List
@@ -19,9 +7,9 @@ import pandas as pd
 from source_code.constants import *
 from source_code.prepare_data_and_config_for_runs.prepare_data_for_runs_utils import *
 
-
 # -------------------------------------------------------
 # M0_all_const
+# All transition functions are constant, and all transition init values are set to the default values.
 # -------------------------------------------------------
 
 def build_M0_all_const_configuration_file(input_parsed_results_file: Path) -> pd.DataFrame:
@@ -41,9 +29,14 @@ def build_M0_all_const_configuration_file(input_parsed_results_file: Path) -> pd
     return config_df
 
 # -------------------------------------------------------
-# M1 family
+# M1 family: M1_{function}_{tested_transition}
+# All transition functions are constant and are initialized using the M0 inferred values,
+# except for {tested_transition}, whose function is set to {function} and init values are determined by a
+# function-specific initialization rule:
+#   ignore: default ""
+#   linear: intercept=M0 inferred value, slope=default "0.1"
 # -------------------------------------------------------
-def build_tested_transition_init_values_from_M0_intercept_and_defaults(baseline_init_values: List[float], tested_function_label: str) -> List[float]:
+def build_tested_transition_init_values_from_M0_and_defaults(baseline_init_values: List[float], tested_function_label: str) -> List[float]:
     default_vals = parse_default_init_values_for_function(tested_function_label)
     if len(default_vals) == 0:
         return []
@@ -62,7 +55,7 @@ def build_M1_configuration_file(input_parsed_results_file: Path, families_file: 
         transition_to_init_values_dict: Dict[str, list[float]] = build_M0_inferred_init_values_dict(family_row)
 
         baseline_vals = transition_to_init_values_dict[tested_transition_label]
-        transition_to_init_values_dict[tested_transition_label] = build_tested_transition_init_values_from_M0_intercept_and_defaults(baseline_vals, tested_function_label)
+        transition_to_init_values_dict[tested_transition_label] = build_tested_transition_init_values_from_M0_and_defaults(baseline_vals, tested_function_label)
 
         row = build_model_config_family_row(family_row, transition_to_function_dict, transition_to_init_values_dict)
         rows.append(row)
@@ -73,7 +66,10 @@ def build_M1_configuration_file(input_parsed_results_file: Path, families_file: 
     return config_df
 
 # -------------------------------------------------------
-# M2 placeholder
+# M2 placeholder: M2_{function}_{tested_transition}
+# All transition functions other than {tested_transition} are set to their best previously selected function based on comparison among M0 and the relevant M1 models,
+# and are initialized using the corresponding inferred values.
+# The {tested_transition} function is set to {function} and its init values are determined by a function-specific initialization rule.
 # -------------------------------------------------------
 def build_M2_configuration_file(*args, **kwargs):
     raise NotImplementedError(

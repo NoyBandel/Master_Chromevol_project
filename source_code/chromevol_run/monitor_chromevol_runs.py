@@ -125,6 +125,14 @@ def check_family(family: str, families_root: Path, configuration: str) -> tuple[
             f"error message: {res_path}\n"
         )
 
+    expectations_file_path = results_dir / "expectations_second_round.txt"
+    if not expectations_file_path.exists():
+        return None, (
+            f"{family}:\n"
+            f"error type: MISSING_EXPECTATIONS_FILE\n"
+            f"error message: {expectations_file_path}\n"
+        )
+
     return None, None
 
 

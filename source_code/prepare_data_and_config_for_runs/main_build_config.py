@@ -72,3 +72,5 @@ def main():
 if __name__ == "__main__":
     main()
 
+
+### ---- for the chosen except for tested - if bsaenum is ignore then basenumber should be set to 0

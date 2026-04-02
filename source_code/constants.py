@@ -2,27 +2,29 @@ from pathlib import Path
 from typing import Dict, List
 
 # -------- paths --------
-PROJECT_ROOT: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project")
-LOGS_ROOT: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/logs/")
+# PROJECT_ROOT: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project")
+PROJECT_ROOT: Path = Path("C:/Users/noyba/Documents/chromevol_local")
 
-DATABASE_INPUT_DIR: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/input_data/families_chrom_input/")
-INPUT_DATA_DIR: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/input_data/")
-ALL_FAMILIES_DATA_SUMMARY_FILE: Path = Path("all_families_data_summary.csv")
-PLOIDB_BY_FAMILY_FILE: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/input_data/ploidb_by_family_without_missing.csv")
-PLOIDB_BY_GENUS_FILE: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/input_data/ploidb_by_genus_without_missing.csv")
+LOGS_ROOT: Path = PROJECT_ROOT / "logs"
 
-CHROMEVOL_RAW_RESULTS_ROOT: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/chromevol_raw_results/")
+INPUT_DATA_DIR: Path = PROJECT_ROOT / "input_data"
+DATABASE_INPUT_DIR: Path = INPUT_DATA_DIR / "families_chrom_input"
+ALL_FAMILIES_DATA_SUMMARY_FILE: Path = INPUT_DATA_DIR / "all_families_data_summary.csv"
+PLOIDB_BY_FAMILY_FILE: Path = INPUT_DATA_DIR / "ploidb_by_family_without_missing.csv"
+PLOIDB_BY_GENUS_FILE: Path = INPUT_DATA_DIR / "ploidb_by_genus_without_missing.csv"
+
+CHROMEVOL_RAW_RESULTS_ROOT: Path = PROJECT_ROOT / "chromevol_raw_results"
+PARSED_RESULTS_ROOT: Path = PROJECT_ROOT / "chromevol_parsed_results"
+MODEL_SPECIFIC_CONFIG_ROOT: Path = PROJECT_ROOT / "model_specific_configuration_files"
+ANALYSIS_DIR: Path = PROJECT_ROOT / "analysis"
+
+# ----------------
+PREPARE_AND_SUBMIT_CHROMEVOL_PY_FILE = Path("source_code/chromevol_run/prepare_and_submit_chromevol_jobs_for_families.py")
 
 CHROMEVOL_EXE: Path = Path("/groups/itay_mayrose/noybandel/ChromEvol_project/chromevol_program/chromevol/ChromEvol/chromEvol")
 CONDA_ENV: Path = Path("source /groups/itay_mayrose/noybandel/miniconda3/etc/profile.d/conda.sh; conda activate chromevol")
 CONDA_EXPORT: Path = Path("export LD_LIBRARY_PATH=/groups/itay_mayrose/noybandel/miniconda3/envs/chromevol/lib:$LD_LIBRARY_PATH\n")
 
-PREPARE_AND_SUBMIT_CHROMEVOL_PY_FILE = Path("source_code/chromevol_run/prepare_and_submit_chromevol_jobs_for_families.py")
-
-
-PARSED_RESULTS_ROOT = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/chromevol_parsed_results/")
-
-MODEL_SPECIFIC_CONFIG_ROOT: Path = PROJECT_ROOT / "model_specific_configuration_files"
 
 
 # -------- preprocessing --------
@@ -190,6 +192,14 @@ TRANSITIONS_LABEL_TO_CE_RES: Dict[str, str] = {LABEL_GAIN: CE_RES_OUTPUT_GAIN,
                            LABEL_BASE_NUM: CE_RES_OUTPUT_BASE_NUM,
 }
 TRANSITIONS_CE_RES_TO_LABEL: Dict[str, str] = {v: k for k, v in TRANSITIONS_LABEL_TO_CE_RES.items()}
+
+TRANSITION_TO_EVENTS_COL: Dict[str, str] = {
+    LABEL_GAIN: EXP_GAIN_COL,
+    LABEL_LOSS: EXP_LOSS_COL,
+    LABEL_DUPL: EXP_DUPL_COL,
+    LABEL_DEMI: EXP_DEMI_COL,
+    LABEL_BASE_NUM: EXP_BASE_NUM_COL,
+}
 
 PARSED_RESULTS_FILE_PREFIX: str = "parsed_results"
 
