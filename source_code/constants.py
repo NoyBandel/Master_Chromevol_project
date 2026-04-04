@@ -2,8 +2,8 @@ from pathlib import Path
 from typing import Dict, List
 
 # -------- paths --------
-# PROJECT_ROOT: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project")
-PROJECT_ROOT: Path = Path("C:/Users/noyba/Documents/chromevol_local")
+PROJECT_ROOT: Path = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project")
+# PROJECT_ROOT: Path = Path("C:/Users/noyba/Documents/chromevol_local")
 
 LOGS_ROOT: Path = PROJECT_ROOT / "logs"
 
@@ -34,10 +34,11 @@ FAMILY_SIZE_COL: str = "family_size"
 MIN_CHROM_COL: str = "min_chrom"
 MAX_CHROM_COL: str = "max_chrom"
 DIFF_COL: str = "diff_chrom"
+STD_CHROM_COL: str = "std_chrom"
 POLYPLOIDY_BY_FAMILY: str = "num_of_polyploid_species_by_family"
 POLYPLOIDY_BY_GENUS: str = "num_of_polyploid_species_by_genus"
 
-PREPROCESSING_COLUMNS: list[str] = [FAMILY_NAME_COL, FAMILY_SIZE_COL, MIN_CHROM_COL, MAX_CHROM_COL, DIFF_COL, POLYPLOIDY_BY_FAMILY, POLYPLOIDY_BY_GENUS]
+PREPROCESSING_COLUMNS: list[str] = [FAMILY_NAME_COL, FAMILY_SIZE_COL, MIN_CHROM_COL, MAX_CHROM_COL, DIFF_COL, STD_CHROM_COL, POLYPLOIDY_BY_FAMILY, POLYPLOIDY_BY_GENUS]
 
 
 # input data
@@ -157,12 +158,12 @@ TESTED_TRANSITION_N_PARAMS_COL = "tested_transition_n_params"
 PARAM_0_COL = "param_0"
 PARAM_1_COL = "param_1"
 PARAM_2_COL = "param_2"
-ALL_PARAMS_DICT_STR_COL = "all_params_dict_str"
+PARAMS_JSON_COL = "parameters_json"
 
 PARSED_RESULTS_COLS = [FAMILY_NAME_COL, CONFIG_COL, LABEL_TESTED_TRANSITION_COL, LABEL_FUNC_TYPE_COL,
                        ROOT_CHROM_NUM_COL, BASE_CHROM_NUM_COL, LIKELIHOOD_COL, AICC_COL,
                        EXP_GAIN_COL, EXP_LOSS_COL, EXP_DUPL_COL, EXP_DEMI_COL, EXP_BASE_NUM_COL,
-                       TESTED_TRANSITION_N_PARAMS_COL, PARAM_0_COL, PARAM_1_COL, PARAM_2_COL, ALL_PARAMS_DICT_STR_COL
+                       TESTED_TRANSITION_N_PARAMS_COL, PARAM_0_COL, PARAM_1_COL, PARAM_2_COL, PARAMS_JSON_COL
                        ]
 
 CE_EXP_OUTPUT_GAIN = "GAIN"

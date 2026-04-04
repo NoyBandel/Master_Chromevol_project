@@ -35,10 +35,11 @@ def families_data_summary_to_csv(database_chr_count_input: Path, preprocessing_d
                 tree_size: int = sum(1 for line in file if line.startswith('>'))
             data[FAMILY_SIZE_COL].append(tree_size)
 
-            min_chrom, max_chrom, diff = family_chrom_range(chrom_counts_file_path)
+            min_chrom, max_chrom, diff, std = family_chrom_range(chrom_counts_file_path)
             data[MIN_CHROM_COL].append(min_chrom)
             data[MAX_CHROM_COL].append(max_chrom)
             data[DIFF_COL].append(diff)
+            data[STD_CHROM_COL].append(std)
 
             ploidb_by_family, ploidb_by_genus = family_ploidy_level(family_name, PLOIDB_BY_FAMILY_FILE, PLOIDB_BY_GENUS_FILE)
 
@@ -63,7 +64,7 @@ def filter_families_by_minimum_num_of_species(families_data_summary: Path, min_f
 
     filtered_df: pd.DataFrame = all_families_df.loc[all_families_df[FAMILY_SIZE_COL] >= min_family_size]
     preprocessing_dir.mkdir(parents=True, exist_ok=True)
-    output_path: Path = preprocessing_dir / "families_for_analysis.csv"
+    output_path: Path = preprocessing_dir / "families_for_analysis_metadata.csv"
     filtered_df.to_csv(output_path, index=False)
 
     total = int(len(all_families_df))
@@ -99,7 +100,8 @@ def preprocessing_summary(families_for_analysis_file: Path, preprocessing_dir: P
             f.write(f"  min     = {series.min()}\n")
             f.write(f"  max     = {series.max()}\n")
             f.write(f"  average = {series.mean()}\n")
-            f.write(f"  median = {series.median()}\n\n")
+            f.write(f"  median = {series.median()}\n")
+            f.write(f"  std     = {series.std()}\n\n")
 
         f.write("Global counts:\n")
         f.write(f"  number of families = {len(analysis_families_df)}\n")

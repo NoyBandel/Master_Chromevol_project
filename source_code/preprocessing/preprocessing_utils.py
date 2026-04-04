@@ -2,10 +2,10 @@ from pathlib import Path
 from typing import Tuple
 import pandas as pd
 from Bio import SeqIO
+import numpy as np
 
-def family_chrom_range(counts_file_path: Path) -> tuple[int, int, int]:
-    min_chrom: int | None = None
-    max_chrom: int | None = None
+def family_chrom_range(counts_file_path: Path) -> Tuple[int, int, int, float]:
+    values: list[int] = []
 
     with counts_file_path.open("r") as file:
         for line in file:
@@ -16,18 +16,17 @@ def family_chrom_range(counts_file_path: Path) -> tuple[int, int, int]:
             if not value:
                 continue
 
-            chrom_num: int = int(value)
+            values.append(int(value))
 
-            if min_chrom is None or chrom_num < min_chrom:
-                min_chrom = chrom_num
-            if max_chrom is None or chrom_num > max_chrom:
-                max_chrom = chrom_num
+    if not values:
+        return 0, 0, 0, 0.0
 
-    if min_chrom is None or max_chrom is None:
-        return 0, 0, 0
+    min_chrom = min(values)
+    max_chrom = max(values)
+    chrom_range = max_chrom - min_chrom
+    std = float(np.std(values))
 
-    return min_chrom, max_chrom, max_chrom - min_chrom
-
+    return min_chrom, max_chrom, chrom_range, std
 
 def family_ploidy_level(family_name: str,ploidb_by_family_file: Path,ploidb_by_genus_file: Path) -> Tuple[int, int]:
     ploidb_by_family_df: pd.DataFrame = pd.read_csv(ploidb_by_family_file)

@@ -5,47 +5,17 @@ from source_code.logger import log_run
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Preprocessing pipeline runner")
-
-    p.add_argument(
-        "--run",
-        choices=[
-            "all_families_data_summary",
-            "filter_min_family_size",
-            "preprocessing_summary_stats",
-            "find_species_with_extreme_chr_num",
-        ],
-        required=True,
-        help="Which step to run",
-    )
-
-    p.add_argument(
-        "--min-family-size",
-        type=int,
-        default=50,
-        help="Minimum family size for filtering (used in 'filter_min_family_size')",
-    )
-
-    p.add_argument(
-        "--extreme-type",
-        choices=["min", "max"],
-        default="min",
-        help="Extreme type for 'find_species_with_extreme_chr_num' (min/max)",
-    )
-
-    p.add_argument(
-        "--notes",
-        type=str,
-        default=None,
-        help="Optional free-text notes to store in the run log",
-    )
-
+    p.add_argument("--run", choices=["all_families_data_summary", "filter_min_family_size", "preprocessing_summary_stats", "find_species_with_extreme_chr_num"], required=True, help="Which step to run")
+    p.add_argument("--min-family-size", type=int, default=50, help="Minimum family size for filtering (used in 'filter_min_family_size')")
+    p.add_argument("--extreme-type", choices=["min", "max"], default="min",help="Extreme type for 'find_species_with_extreme_chr_num' (min/max)")
+    p.add_argument("--notes", type=str, default=None, help="Optional free-text notes to store in the run log")
     return p.parse_args()
 
 def main() -> None:
     args = parse_args()
 
     all_families_csv: Path = ALL_FAMILIES_DATA_SUMMARY_FILE
-    families_for_analysis_csv: Path = INPUT_DATA_DIR / "families_for_analysis.csv"
+    families_for_analysis_csv: Path = INPUT_DATA_DIR / "families_for_analysis_metadata.csv"
     summary_txt: Path = INPUT_DATA_DIR / "families_for_analysis_summary.txt"
     extreme_txt: Path = INPUT_DATA_DIR / f"{args.extreme_type}_chrom_species.txt"
 
