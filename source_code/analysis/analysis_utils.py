@@ -6,7 +6,7 @@ from source_code.logger import log_run
 
 #-------------
 def extract_params(row, tested_transition):
-    params_dict = json.loads(row[ALL_PARAMS_DICT_STR_COL])
+    params_dict = json.loads(row[PARAMS_JSON_COL])
     params = params_dict.get(tested_transition, [])
     n = len(params)
     p0 = params[0] if n > 0 else None

@@ -205,7 +205,7 @@ def parse_single_family_run(family_name: str, family_raw_results_dir: Path, conf
     row[PARAM_1_COL] = param_1
     row[PARAM_2_COL] = param_2
 
-    row[ALL_PARAMS_DICT_STR_COL] = json.dumps(all_params_dict, sort_keys=True)
+    row[PARAMS_JSON_COL] = json.dumps(all_params_dict, sort_keys=True)
 
     return row
 

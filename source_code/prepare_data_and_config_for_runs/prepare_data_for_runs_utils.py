@@ -60,7 +60,7 @@ def build_all_constant_transition_to_function_dict() -> Dict[str, str]:
     }
 
 def build_M0_inferred_init_values_dict(parsed_row: pd.Series) -> Dict[str, List[float]]:
-    all_params_dict: Dict[str, List[float]] = json.loads(parsed_row[ALL_PARAMS_DICT_STR_COL])
+    all_params_dict: Dict[str, List[float]] = json.loads(parsed_row[PARAMS_JSON_COL])
     return {
         transition_label: all_params_dict[transition_label]
         for transition_label in LABEL_TRANSITIONS_ORDERED
