@@ -2,7 +2,7 @@
 
 This repository contains the code developed for my M.Sc. research on chromosome-number evolution in flowering plants.
 
-The project examines whether rates of chromosome gain, loss, and duplication depend on the current chromosome number. Using ChromEvol, I compare constant, linear, and exponential evolutionary models across approximately 95 angiosperm families.
+The project examines whether rates of chromosome gain, loss, and duplication depend on the current chromosome number. Using ChromEvol, I compare evolutionary models across approximately 95 angiosperm families.
 
 The repository covers the full analysis workflow, including data preparation, model configuration, large-scale execution on an HPC cluster, result parsing, statistical analysis, and simulation-based power evaluation.
 
