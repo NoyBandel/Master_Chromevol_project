@@ -92,7 +92,7 @@ def main() -> None:
     args = parse_args()
     transition = args.transition
     slope_analysis_file = args.slope_analysis_file
-
+    print(bug)
     output_path = (SIMULATIONS_DIR / transition / SLOPE_GRID_SIMULATIONS_LABEL / SLOPE_GRID_FILENAME)
     slope_grid_df = build_slope_grid(slope_analysis_file=slope_analysis_file)
     save_slope_grid(slope_grid_df=slope_grid_df, output_path=output_path)
