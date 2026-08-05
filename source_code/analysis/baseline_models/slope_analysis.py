@@ -10,6 +10,7 @@ from scipy.stats import ttest_ind, ttest_rel
 
 from source_code.analysis.analysis_constants import *
 from source_code.logger import log_run
+from matplotlib.ticker import MaxNLocator
 
 
 # ==================================================================================== #
@@ -36,15 +37,9 @@ NUM_OF_EVENTS_COL_NAME = globals().get("NUM_OF_EVENTS_COL", "num_of_events")
 # ==================================================================================== #
 # Defaults
 # ==================================================================================== #
-DEFAULT_METADATA_FILE = Path(
-    "/groups/itay_mayrose/noybandel/Master_ChromEvol_project/input_data/families_for_analysis_metadata.csv"
-)
-DEFAULT_CHOSEN_MODELS_DIR = Path(
-    "/groups/itay_mayrose/noybandel/Master_ChromEvol_project/chromevol_parsed_results/model_selection"
-)
-DEFAULT_OUTPUT_DIR = Path(
-    "/groups/itay_mayrose/noybandel/Master_ChromEvol_project/source_code/analysis/baseline_models/feature_analysis_outputs"
-)
+DEFAULT_METADATA_FILE = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/input_data/families_for_analysis_metadata.csv")
+DEFAULT_CHOSEN_MODELS_DIR = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/chromevol_parsed_results/model_selection")
+DEFAULT_OUTPUT_DIR = Path("/groups/itay_mayrose/noybandel/Master_ChromEvol_project/source_code/analysis/baseline_models/feature_analysis_outputs")
 
 METADATA_FEATURES = [
     (FAMILY_SIZE_COL_NAME, "Family size"),
@@ -69,6 +64,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--chosen_models_csv", type=Path, default=None)
     parser.add_argument("--model_summary_csv", type=Path, default=None)
     parser.add_argument("--output_dir", type=Path, default=None)
+    parser.add_argument("--slope_analysis_csv", type=Path,default=None, help="Baseline slope-analysis table used for slope histograms.")
+    parser.add_argument("--slope_histograms_only",action="store_true", help="Generate only the all-LINEAR and chosen-LINEAR slope histograms.")
     return parser.parse_args()
 
 
@@ -590,110 +587,120 @@ def run_inferred_analysis(analysis_df: pd.DataFrame, output_dir: Path, transitio
 
     return saved_files
 
-# -------- histogram: signed slope --------
-def plot_slope_histogram(
-    slope_df: pd.DataFrame,
-    transition_label: str,
-    out_dir: Path,
-    output_paths: List[str],
-) -> None:
-    out_file = out_dir / f"{transition_label}_slope_histogram_signed.png"
+# -------- histograms: signed slopes --------
+SLOPE_HIST_BIN_WIDTH: float = 0.01
+def plot_slope_histograms(slope_df: pd.DataFrame, transition_label: str, out_dir: Path, output_paths: List[str]) -> None:
+    slope_sets = {
+        "all_slopes": slope_df.dropna(subset=[LIN_SLOPE_P2_COL]).copy(),
+        "chosen_linear_slopes": slope_df[
+            (slope_df[CHOSEN_FUNCTION_LABEL_COL] == LABEL_LINEAR)
+            & slope_df[LIN_SLOPE_P2_COL].notna()
+        ].copy(),
+    }
 
-    df = slope_df.dropna(subset=[LIN_SLOPE_P2_COL]).copy()
-    if df.empty:
-        return
+    for slope_set_label, df in slope_sets.items():
+        if df.empty:
+            continue
 
-    fig, ax = plt.subplots(figsize=(9, 6))
+        out_file = out_dir / f"{transition_label}_slope_histogram_{slope_set_label}.png"
+        fig, ax = plt.subplots(figsize=(9, 6))
 
-    # split by sign for color
-    pos_df = df[df[LIN_SLOPE_P2_COL] >= 0]
-    neg_df = df[df[LIN_SLOPE_P2_COL] < 0]
+        pos_df = df[df[LIN_SLOPE_P2_COL] >= 0]
+        neg_df = df[df[LIN_SLOPE_P2_COL] < 0]
 
-    ax.hist(
-        neg_df[LIN_SLOPE_P2_COL],
-        bins=30,
-        alpha=0.7,
-        color=SLOPE_SIGN_COLOR_MAP[NEGATIVE_SLOPE_LABEL],
-        label=f"negative (n={len(neg_df)})",
-    )
+        pos_vals: pd.Series = pd.to_numeric(pos_df[LIN_SLOPE_P2_COL], errors="coerce").dropna()
+        neg_vals: pd.Series = pd.to_numeric(neg_df[LIN_SLOPE_P2_COL], errors="coerce").dropna()
+        all_vals: pd.Series = pd.concat([neg_vals, pos_vals], ignore_index=True)
 
-    ax.hist(
-        pos_df[LIN_SLOPE_P2_COL],
-        bins=30,
-        alpha=0.7,
-        color=SLOPE_SIGN_COLOR_MAP[POSITIVE_SLOPE_LABEL],
-        label=f"positive (n={len(pos_df)})",
-    )
+        bin_start: float = np.floor(all_vals.min() / SLOPE_HIST_BIN_WIDTH) * SLOPE_HIST_BIN_WIDTH
+        bin_end: float = np.ceil(all_vals.max() / SLOPE_HIST_BIN_WIDTH) * SLOPE_HIST_BIN_WIDTH
+        bin_edges: np.ndarray = np.arange(bin_start, bin_end + SLOPE_HIST_BIN_WIDTH, SLOPE_HIST_BIN_WIDTH)
 
-    ax.axvline(0, color="black", linestyle="--", linewidth=1)
+        ax.hist(neg_vals, bins=bin_edges, alpha=0.7, color=SLOPE_SIGN_COLOR_MAP[NEGATIVE_SLOPE_LABEL],
+                label=f"negative (n={len(neg_vals)})")
+        ax.hist(pos_vals, bins=bin_edges, alpha=0.7, color=SLOPE_SIGN_COLOR_MAP[POSITIVE_SLOPE_LABEL],
+                label=f"positive (n={len(pos_vals)})")
 
-    ax.set_title(f"{transition_label}: slope distribution (signed)")
-    ax.set_xlabel("slope (p2)")
-    ax.set_ylabel("Number of families")
-    ax.legend()
+        ax.axvline(0, color="black", linestyle="--", linewidth=1)
 
-    fig.tight_layout()
-    fig.savefig(out_file, dpi=300, bbox_inches="tight")
-    plt.close(fig)
+        total_n: int = len(all_vals)
+        ax.set_title(f"{transition_label}: slope distribution ({slope_set_label}, n={total_n})")
+        ax.set_xlabel("slope")
+        ax.set_ylabel("Number of families")
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.legend()
 
-    output_paths.append(str(out_file))
+        fig.tight_layout()
+        fig.savefig(out_file, dpi=300, bbox_inches="tight")
+        plt.close(fig)
 
+        output_paths.append(str(out_file))
 
 # ==================================================================================== #
 # Main
 # ==================================================================================== #
 def main() -> None:
-    args = parse_args()
-
-    chosen_models_csv, model_summary_csv = resolve_default_paths(
-        transition=args.transition,
-        chosen_models_csv=args.chosen_models_csv,
-        model_summary_csv=args.model_summary_csv,
-    )
-
-    output_dir = args.output_dir or (DEFAULT_OUTPUT_DIR / args.transition)
+    args: argparse.Namespace = parse_args()
+    output_dir: Path = args.output_dir or (DEFAULT_OUTPUT_DIR / args.transition)
     ensure_dir(output_dir)
 
-    chosen_df = load_chosen_models(chosen_models_csv, args.transition)
-    metadata_df = load_metadata(args.metadata_file)
-    metadata_analysis_df = build_metadata_analysis_df(chosen_df, metadata_df)
+    output_files: List[Path] = []
 
-    model_summary_df = load_model_summary(model_summary_csv, args.transition)
-    inferred_analysis_df = build_inferred_analysis_df(chosen_df, model_summary_df)
+    if args.slope_histograms_only:
+        if args.slope_analysis_csv is None:
+            raise ValueError("--slope_analysis_csv is required with --slope_histograms_only.")
 
-    output_files = []
+        slope_df: pd.DataFrame = load_csv(args.slope_analysis_csv, "Slope analysis")
+        slope_output_paths: List[str] = []
 
-    counts_plot_file = output_dir / f"{args.transition}_chosen_model_counts.png"
-    save_count_barplot(chosen_df, counts_plot_file, args.transition)
-    output_files.append(counts_plot_file)
+        plot_slope_histograms(slope_df=slope_df, transition_label=args.transition, out_dir=output_dir, output_paths=slope_output_paths)
+        output_files = [Path(path) for path in slope_output_paths]
 
-    output_files.extend(run_metadata_analysis(metadata_analysis_df, output_dir, args.transition))
-    output_files.extend(run_inferred_analysis(inferred_analysis_df, output_dir, args.transition))
+        step: str = "baseline_slope_histograms"
+        params: Dict[str, object] = {"transition": args.transition, "slope_analysis_csv": str(args.slope_analysis_csv), "output_dir": str(output_dir)}
+        description: str = f"Generated baseline LINEAR slope histograms for transition {args.transition}."
+        notes: str = "Generated one histogram for all fitted LINEAR slopes and one histogram restricted to baseline LINEAR-chosen families."
+        log_relative_path: str = f"baseline_models/slope_analysis/{args.transition}"
+        completion_message: str = f"Finished baseline slope histograms for transition '{args.transition}'"
 
-    notes = (
-        "Metadata features are compared between families that chose constant vs linear using Welch t-test and Cohen's d. "
-        "Inferred features are analyzed separately, including paired constant-vs-linear comparison per family. "
-        "Annotation boxes are anchored in the upper-right corner with left-aligned text inside."
+    else:
+        chosen_models_csv, model_summary_csv = resolve_default_paths(transition=args.transition, chosen_models_csv=args.chosen_models_csv, model_summary_csv=args.model_summary_csv)
+
+        chosen_df: pd.DataFrame = load_chosen_models(chosen_models_csv, args.transition)
+        metadata_df: pd.DataFrame = load_metadata(args.metadata_file)
+        metadata_analysis_df: pd.DataFrame = build_metadata_analysis_df(chosen_df, metadata_df)
+        model_summary_df: pd.DataFrame = load_model_summary(model_summary_csv, args.transition)
+        inferred_analysis_df: pd.DataFrame = build_inferred_analysis_df(chosen_df, model_summary_df)
+
+        counts_plot_file: Path = output_dir / f"{args.transition}_chosen_model_counts.png"
+        save_count_barplot(chosen_df, counts_plot_file, args.transition)
+
+        output_files.append(counts_plot_file)
+        output_files.extend(run_metadata_analysis(metadata_analysis_df, output_dir, args.transition))
+        output_files.extend(run_inferred_analysis(inferred_analysis_df, output_dir, args.transition))
+
+        step = "analysis"
+        params = {"transition": args.transition, "metadata_file": str(args.metadata_file), "chosen_models_csv": str(chosen_models_csv), "model_summary_csv": str(model_summary_csv), "output_dir": str(output_dir)}
+        description = f"Feature analysis for transition {args.transition}."
+        notes = "Generated chosen-model counts and comparisons of metadata and inferred features between constant- and linear-chosen families."
+        log_relative_path = f"baseline_models/feature_analysis/{args.transition}"
+        completion_message = f"Finished feature analysis for transition '{args.transition}'"
+
+    log_run(
+        step=step,
+        script=Path(__file__),
+        params=params,
+        outputs=[str(path) for path in output_files],
+        description=description,
+        notes=notes,
+        log_relative_path=log_relative_path,
     )
 
-    # log_run(
-    #     step="analysis",
-    #     script=Path(__file__).name,
-    #     params={
-    #         "transition": args.transition,
-    #         "metadata_file": str(args.metadata_file),
-    #         "chosen_models_csv": str(chosen_models_csv),
-    #         "model_summary_csv": str(model_summary_csv),
-    #         "output_dir": str(output_dir),
-    #     },
-    #     outputs=[str(path) for path in output_files],
-    #     description=f"Feature analysis for transition {args.transition}",
-    #     notes=notes,
-    #     log_relative_path=f"baseline_models/feature_analysis/{args.transition}",
-    # )
-
-    print(f"Finished feature analysis for transition '{args.transition}'")
+    print(completion_message)
     print(f"Output directory: {output_dir}")
+
+    for output_file in output_files:
+        print(output_file)
 
 
 if __name__ == "__main__":

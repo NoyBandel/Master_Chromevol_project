@@ -1,12 +1,11 @@
 import argparse
-from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 import pandas as pd
 from scipy.stats import kruskal, mannwhitneyu, ttest_ind, ttest_rel
 
 from source_code.analysis.analysis_constants import *
-from source_code.analysis.baseline_models.plot_utils import (
+from source_code.analysis.plot_utils import (
     build_stats,
     ensure_dir,
     get_ordered_counts,

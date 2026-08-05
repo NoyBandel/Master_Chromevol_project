@@ -23,7 +23,7 @@ from source_code.analysis.analysis_constants import (
     WEIGHT_SUPPORT_CLASS_COLOR_MAP,
     WEIGHT_SUPPORT_COL,
 )
-from source_code.analysis.baseline_models.plot_utils import ensure_dir, plot_hist_by_class, plot_pie_counts
+from source_code.analysis.plot_utils import ensure_dir, plot_hist_by_class, plot_pie_counts
 from source_code.logger import log_run
 
 
@@ -85,24 +85,14 @@ def save_table(df: pd.DataFrame, out_file: Path, output_paths: List[str]) -> Non
 
 
 # -------- plotting helpers --------
-def plot_model_selection_pies(
-    transition_label: str,
-    out_dir: Path,
-    counts_all: pd.Series,
-    counts_no_ignore: pd.Series,
-    agg_weights: pd.Series,
-    n_total: int,
-    n_no_ignore: int,
-    output_paths: List[str],
-) -> None:
+def plot_model_selection_pies(transition_label: str, out_dir: Path, counts_all: pd.Series, counts_no_ignore: pd.Series, agg_weights: pd.Series, n_total: int, n_no_ignore: int, output_paths: List[str]) -> None:
     pie_all_file = out_dir / f"{transition_label}_chosen_model_pie.png"
     pie_no_ignore_file = out_dir / f"{transition_label}_chosen_model_pie_no_ignore.png"
     weight_pie_file = out_dir / f"{transition_label}_aggregated_best_akaike_weight_pie_no_ignore.png"
 
     # ---- counts (all) ----
-    plot_pie_counts(
-        counts=counts_all,
-        title=f"{transition_label}: chosen model distribution",
+    plot_pie_counts(counts=counts_all,
+        title=f"{transition_label}: chosen model distribution (including ignore)",
         out_file=pie_all_file,
         color_map=MODEL_COLOR_MAP,
         show_counts=True,
@@ -112,7 +102,7 @@ def plot_model_selection_pies(
     # ---- counts (no ignore) ----
     plot_pie_counts(
         counts=counts_no_ignore,
-        title=f"{transition_label}: chosen model distribution (constant vs linear)",
+        title=f"{transition_label}: chosen model distribution",
         out_file=pie_no_ignore_file,
         color_map=MODEL_COLOR_MAP,
         show_counts=True,
@@ -122,11 +112,11 @@ def plot_model_selection_pies(
     # ---- akaike weights ----
     plot_pie_counts(
         counts=agg_weights,
-        title=f"{transition_label}: aggregated best Akaike weights (constant vs linear)",
+        title=f"{transition_label}: aggregated best Akaike weights",
         out_file=weight_pie_file,
         color_map=MODEL_COLOR_MAP,
         show_counts=False,
-        total_n=n_no_ignore,  # IMPORTANT: number of families
+        total_n=n_no_ignore,
     )
 
     output_paths.extend([
@@ -135,12 +125,7 @@ def plot_model_selection_pies(
         str(weight_pie_file),
     ])
 
-def plot_threshold_histograms(
-    transition_label: str,
-    out_dir: Path,
-    chosen_no_ignore_df: pd.DataFrame,
-    output_paths: List[str],
-) -> None:
+def plot_threshold_histograms(transition_label: str, out_dir: Path, chosen_no_ignore_df: pd.DataFrame, output_paths: List[str]) -> None:
     delta_hist_file: Path = out_dir / f"{transition_label}_delta_best_vs_second_hist_no_ignore.png"
     weight_hist_file: Path = out_dir / f"{transition_label}_best_akaike_weight_hist_no_ignore.png"
 
