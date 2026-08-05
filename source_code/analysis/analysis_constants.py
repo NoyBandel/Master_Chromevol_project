@@ -199,6 +199,7 @@ NEGATIVE_SLOPE_LABEL: str = "negative"
 MODEL_COLOR_MAP: Dict[str, str] = {
     LABEL_CONSTANT: "#4C72B0",   # muted blue
     LABEL_LINEAR: "#DD8452",     # muted orange
+    LABEL_EXP: "#55A868",        # muted green
     LABEL_IGNORE: "#C7C7C7",     # light grey
 }
 
@@ -235,3 +236,60 @@ FEATURE_ANALYSIS_COLS: List[str] = [
     DIFF_COL,
     STD_CHROM_COL,
 ]
+
+# =========================================================
+# FEATURE ANALYSIS
+# =========================================================
+
+FEATURE_ANALYSIS_SUBDIR: str = "feature_analysis"
+
+FEATURE_ANALYSIS_INFERRED_COLS: List[str] = [
+    NUM_OF_EVENTS_COL,
+    ROOT_CHROM_NUM_COL,
+    BASE_CHROM_NUM_COL,
+]
+
+FEATURE_ANALYSIS_METADATA_COLS: List[str] = [
+    FAMILY_SIZE_COL,
+    MIN_CHROM_COL,
+    MAX_CHROM_COL,
+    DIFF_COL,
+    STD_CHROM_COL,
+]
+
+FEATURE_ANALYSIS_COLS: List[str] = (
+    FEATURE_ANALYSIS_INFERRED_COLS
+    + FEATURE_ANALYSIS_METADATA_COLS
+)
+
+# ---- direct H0-vs-H1 model comparison ----
+
+H0_AICC_COL: str = "h0_aicc"
+H1_AICC_COL: str = "h1_aicc"
+
+SIGNED_DELTA_AICC_H0_MINUS_H1_COL: str = (
+    "signed_delta_aicc_h0_minus_h1"
+)
+PAIRWISE_DELTA_AICC_COL: str = "pairwise_delta_aicc"
+
+H0_PAIRWISE_AKAIKE_WEIGHT_COL: str = "h0_pairwise_akaike_weight"
+H1_PAIRWISE_AKAIKE_WEIGHT_COL: str = "h1_pairwise_akaike_weight"
+PAIRWISE_BEST_AKAIKE_WEIGHT_COL: str = "pairwise_best_akaike_weight"
+
+# ---- threshold scans ----
+
+THRESHOLD_AT_OR_ABOVE: str = "at_or_above"
+THRESHOLD_AT_OR_BELOW: str = "at_or_below"
+
+DEFAULT_MIN_THRESHOLD_FAMILIES: int = 5
+STRONG_DELTA_AICC_THRESHOLD: float = 4.0
+
+# <= threshold saturation
+SATURATION_TOLERANCE_PP: float = 5.0
+SATURATION_MIN_POINTS: int = 3
+
+# >= threshold empirical candidate-filter criteria
+CANDIDATE_MIN_H1_GAIN_PP: float = 10.0
+CANDIDATE_MIN_STRONG_H1_GAIN_PP: float = 5.0
+CANDIDATE_MAX_FUTURE_GAIN_PP: float = 5.0
+CANDIDATE_MIN_RETAINED_PCT: float = 25.0
