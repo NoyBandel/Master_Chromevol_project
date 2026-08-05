@@ -90,8 +90,6 @@ def parse_args() -> Namespace:
 
 def main() -> None:
     args = parse_args()
-
-    print("hi")
     transition = args.transition
     slope_analysis_file = args.slope_analysis_file
 
