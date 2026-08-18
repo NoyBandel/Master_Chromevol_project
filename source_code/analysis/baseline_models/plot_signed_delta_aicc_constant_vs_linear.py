@@ -222,37 +222,23 @@ def format_median_abs_delta(values: pd.Series) -> str:
 
 
 def build_summary_text(signed_df: pd.DataFrame) -> str:
-    constant_values = signed_df.loc[
-        signed_df[WINNING_MODEL_COL] == LABEL_CONSTANT,
-        SIGNED_DELTA_AICC_COL,
-    ]
-    linear_values = signed_df.loc[
-        signed_df[WINNING_MODEL_COL] == LABEL_LINEAR,
-        SIGNED_DELTA_AICC_COL,
-    ]
-    tie_values = signed_df.loc[
-        signed_df[WINNING_MODEL_COL] == TIE_LABEL,
-        SIGNED_DELTA_AICC_COL,
+    constant_values = signed_df.loc[signed_df[WINNING_MODEL_COL] == LABEL_CONSTANT, SIGNED_DELTA_AICC_COL]
+    linear_values = signed_df.loc[signed_df[WINNING_MODEL_COL] == LABEL_LINEAR, SIGNED_DELTA_AICC_COL]
+    tie_values = signed_df.loc[ signed_df[WINNING_MODEL_COL] == TIE_LABEL, SIGNED_DELTA_AICC_COL]
+
+    summary_lines = [
+        f"n={len(signed_df)} families",
+        f"constant wins: n={len(constant_values)}, median |ΔAICc|={format_median_abs_delta(constant_values)}",
+        f"linear wins: n={len(linear_values)}, median |ΔAICc|={format_median_abs_delta(linear_values)}",
     ]
 
-    return "\n".join(
-        [
-            f"n={len(signed_df)} families",
-            f"constant wins: n={len(constant_values)}, median |ΔAICc|={format_median_abs_delta(constant_values)}",
-            f"linear wins: n={len(linear_values)}, median |ΔAICc|={format_median_abs_delta(linear_values)}",
-            f"ties: n={len(tie_values)}",
-        ]
-    )
+    if len(tie_values) > 0:
+        summary_lines.append(f"ties: n={len(tie_values)}")
+
+    return "\n".join(summary_lines)
 
 
-def plot_signed_delta_histogram(
-    signed_df: pd.DataFrame,
-    transition_label: str,
-    out_file: Path,
-    bin_count: int = 40,
-    bin_size: Optional[float] = None,
-    add_support_guides: bool = True,
-) -> None:
+def plot_signed_delta_histogram(signed_df: pd.DataFrame, transition_label: str, out_file: Path, bin_count: int = 40, bin_size: Optional[float] = None, add_support_guides: bool = True) -> None:
     if signed_df.empty:
         raise ValueError("No rows available for plotting.")
 
@@ -373,15 +359,8 @@ def plot_signed_delta_histogram(
 # -----------------------------------------------------------------------------
 # Running
 # -----------------------------------------------------------------------------
-def run_transition(
-    transition_label: str,
-    models_summary_file: Optional[Path] = None,
-    chosen_model_file: Optional[Path] = None,
-    output_dir: Optional[Path] = None,
-    bin_count: int = 40,
-    bin_size: Optional[float] = None,
-    add_support_guides: bool = True,
-) -> Dict[str, object]:
+def run_transition(transition_label: str, models_summary_file: Optional[Path] = None, chosen_model_file: Optional[Path] = None, output_dir: Optional[Path] = None,
+                    bin_count: int = 40, bin_size: Optional[float] = None, add_support_guides: bool = True, log_note: str = "") -> Dict[str, object]:
     if transition_label not in ALLOWED_TRANSITIONS:
         raise ValueError(f"Unsupported transition: {transition_label}. Allowed: {ALLOWED_TRANSITIONS}")
 
@@ -399,25 +378,14 @@ def run_transition(
     models_summary_df = load_models_summary_table(models_summary_file)
     non_ignore_family_names = load_non_ignore_family_names(chosen_model_file)
 
-    signed_df = build_signed_delta_table(
-        models_summary_df=models_summary_df,
-        non_ignore_family_names=non_ignore_family_names,
-    )
+    signed_df = build_signed_delta_table(models_summary_df, non_ignore_family_names)
 
     table_file = output_dir / f"{transition_label}_signed_delta_AICc_constant_vs_linear_non_ignore.csv"
     plot_file = output_dir / f"{transition_label}_signed_delta_AICc_constant_vs_linear_non_ignore_hist.png"
 
     signed_df.to_csv(table_file, index=False)
 
-    plot_signed_delta_histogram(
-        signed_df=signed_df,
-        transition_label=transition_label,
-        out_file=plot_file,
-        bin_count=bin_count,
-        bin_size=bin_size,
-        add_support_guides=add_support_guides,
-    )
-
+    plot_signed_delta_histogram(signed_df, transition_label, plot_file, bin_count, bin_size, add_support_guides)
     counts = signed_df[WINNING_MODEL_COL].value_counts().to_dict()
     outputs = [str(table_file), str(plot_file)]
 
@@ -442,9 +410,10 @@ def run_transition(
             f"in transition '{transition_label}', excluding ignore-selected families"
         ),
         notes=(
-            "Families with chosen_function_label == ignore are excluded before computing signed ΔAICc. "
-            "Signed ΔAICc is defined as AICc_constant - AICc_linear; "
-            "positive values support linear dependence, negative values support constant."
+                "Families with chosen_function_label == ignore are excluded before computing signed ΔAICc. "
+                "Signed ΔAICc is defined as AICc_constant - AICc_linear; "
+                "positive values support linear dependence, negative values support constant."
+                + (f"\nRun note: {log_note}" if log_note else "")
         ),
         log_relative_path=Path(BASELINE_MODELS_LABEL) / f"{transition_label}.log",
     )
@@ -458,85 +427,23 @@ def run_transition(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Plot signed ΔAICc = AICc_constant - AICc_linear for constant vs linear support, "
-            "excluding families where the baseline selected model is ignore."
-        )
-    )
-
-    parser.add_argument(
-        "--transition",
-        required=True,
-        choices=list(ALLOWED_TRANSITIONS),
-        help="Transition label to plot. Allowed values: gain, loss, dupl.",
-    )
-
-    parser.add_argument(
-        "--models_summary_file",
-        type=Path,
-        default=None,
-        help=(
-            "Optional input CSV. Defaults to "
-            "analysis/baseline_models/<transition>/<transition>_models_summary_table.csv."
-        ),
-    )
-
-    parser.add_argument(
-        "--chosen_model_file",
-        type=Path,
-        default=None,
-        help=(
-            "Optional chosen-model CSV used to exclude ignore-selected families. Defaults to "
-            "analysis/baseline_models/<transition>/<transition>_chosen_model_table.csv."
-        ),
-    )
-
-    parser.add_argument(
-        "--output_dir",
-        type=Path,
-        default=None,
-        help="Optional output directory. Defaults to analysis/baseline_models/<transition>/model_selection/.",
-    )
-
-    parser.add_argument(
-        "--bins",
-        type=int,
-        default=40,
-        help="Number of histogram bins. Forced to even so zero is a bin edge.",
-    )
-
-    parser.add_argument(
-        "--bin_size",
-        type=float,
-        default=None,
-        help="Optional fixed histogram bin size in ΔAICc units.",
-    )
-
-    parser.add_argument(
-        "--no_support_guides",
-        action="store_true",
-        help="Do not draw the ±2 weak-support guide lines.",
-    )
+    parser = argparse.ArgumentParser(description="Plot signed ΔAICc = AICc_constant - AICc_linear for constant vs linear support, excluding families where the baseline selected model is ignore.")
+    parser.add_argument("--transition", required=True, choices=list(ALLOWED_TRANSITIONS), help="Transition label to plot. Allowed values: gain, loss, dupl.")
+    parser.add_argument("--models_summary_file", type=Path, default=None, help="Optional input CSV. Defaults to analysis/baseline_models/<transition>/<transition>_models_summary_table.csv.")
+    parser.add_argument("--chosen_model_file", type=Path, default=None, help="Optional chosen-model CSV used to exclude ignore-selected families. Defaults to analysis/baseline_models/<transition>/<transition>_chosen_model_table.csv.")
+    parser.add_argument("--output_dir", type=Path, default=None, help="Optional output directory. Defaults to analysis/baseline_models/<transition>/model_selection/.")
+    parser.add_argument("--bins", type=int, default=40, help="Number of histogram bins. Forced to even so zero is a bin edge.")
+    parser.add_argument("--bin_size", type=float, default=None, help="Optional fixed histogram bin size in ΔAICc units.")
+    parser.add_argument("--no_support_guides", action="store_true", help="Do not draw the ±2 weak-support guide lines.")
+    parser.add_argument("--log_note", type=str, default="", help="Optional note describing this analysis run.")
 
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-
-    result = run_transition(
-        transition_label=args.transition,
-        models_summary_file=args.models_summary_file,
-        chosen_model_file=args.chosen_model_file,
-        output_dir=args.output_dir,
-        bin_count=args.bins,
-        bin_size=args.bin_size,
-        add_support_guides=not args.no_support_guides,
-    )
-
+    result = run_transition(args.transition, args.models_summary_file, args.chosen_model_file, args.output_dir, args.bins, args.bin_size, not args.no_support_guides, args.log_note)
     print(f"[✓] {result['transition']}: n={result['n_families']}, counts={result['winning_model_counts']}")
-
     for out in result["outputs"]:
         print(f"    {out}")
 

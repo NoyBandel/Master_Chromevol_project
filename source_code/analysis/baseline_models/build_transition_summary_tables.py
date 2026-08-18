@@ -36,6 +36,14 @@ def load_metadata_table(families_metadata_file: Path) -> pd.DataFrame:
 
     return metadata_df[required_cols].copy()
 
+def load_families_list(families_file: Path) -> set[str]:
+    families = set()
+    for line in families_file.read_text(encoding="utf-8").splitlines():
+        family = line.strip()
+        if family:
+            families.add(family)
+    return families
+
 
 # -------- baseline summary construction --------
 def baseline_configs(transition_label: str) -> Dict[str, str]:
@@ -280,8 +288,8 @@ def build_all_function_features_tables(summary_df: pd.DataFrame, chosen_df: pd.D
 
 
 # -------- saving --------
-def build_output_dir(transition_label: str) -> Path:
-    output_dir: Path = BASELINE_ANALYSIS_DIR / transition_label
+def build_output_dir(analysis_root: Path, transition_label: str) -> Path:
+    output_dir: Path = analysis_root / transition_label
     output_dir.mkdir(parents=True, exist_ok=True)
 
     return output_dir
@@ -299,8 +307,8 @@ def build_features_summary_file(output_dir: Path, transition_label: str, functio
     return output_dir / f"{transition_label}_{function_label}_{FEATURES_SUMMARY_SUFFIX}"
 
 
-def save_outputs(summary_df: pd.DataFrame, chosen_df: pd.DataFrame, function_tables: Dict[str, pd.DataFrame], transition_label: str) -> List[str]:
-    output_dir: Path = build_output_dir(transition_label)
+def save_outputs(summary_df: pd.DataFrame, chosen_df: pd.DataFrame, function_tables: Dict[str, pd.DataFrame], transition_label: str, analysis_root: Path) -> List[str]:
+    output_dir: Path = build_output_dir(analysis_root, transition_label)
     summary_file: Path = build_models_summary_file(output_dir, transition_label)
     chosen_file: Path = build_chosen_model_file(output_dir, transition_label)
     output_paths: List[str] = []
@@ -329,7 +337,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build baseline summary, chosen-model, and per-function features tables for one transition.")
     parser.add_argument("--transition_label", required=True, choices=list(LABEL_TRANSITIONS_ORDERED), help="Tested transition to analyze.")
     parser.add_argument("--families_metadata_file", type=Path, default=ALL_FAMILIES_DATA_SUMMARY_FILE, help="CSV file with family metadata from preprocessing.")
-
+    parser.add_argument("--families_file", type=Path, default=None, help="Optional TXT file containing one family name per line. If provided, analysis is restricted to these families.")
+    parser.add_argument("--analysis_root", type=Path, default=BASELINE_ANALYSIS_DIR, help="Root directory for analysis outputs.")
+    parser.add_argument("--log_note", type=str, default="", help="Optional note describing this analysis run.")
     return parser.parse_args()
 
 
@@ -342,18 +352,48 @@ def main() -> None:
         raise ValueError(f"Unsupported transition: {transition_label}")
 
     summary_df: pd.DataFrame = build_baseline_summary_table(transition_label)
+
+    # Optional family filtering
+    if args.families_file is not None:
+        families: set[str] = load_families_list(args.families_file)
+        available_families: set[str] = set(summary_df[FAMILY_NAME_COL])
+        missing_families: set[str] = families - available_families
+
+        if missing_families:
+            print(
+                f"[!] {len(missing_families)} requested families were not found "
+                f"in the parsed baseline results:"
+            )
+            for family in sorted(missing_families):
+                print(f"    {family}")
+
+        summary_df = summary_df[summary_df[FAMILY_NAME_COL].isin(families)].copy()
+        print(
+            f"[✓] Restricted analysis to "
+            f"{summary_df[FAMILY_NAME_COL].nunique()} families"
+        )
+
     chosen_df: pd.DataFrame = build_chosen_model_table(summary_df)
     metadata_df: pd.DataFrame = load_metadata_table(metadata_file)
     function_tables: Dict[str, pd.DataFrame] = build_all_function_features_tables(summary_df, chosen_df, metadata_df)
-    output_paths: List[str] = save_outputs(summary_df, chosen_df, function_tables, transition_label)
+    output_paths: List[str] = save_outputs(summary_df, chosen_df, function_tables, transition_label, args.analysis_root)
 
     log_run(
         step="analysis",
         script=Path(__file__),
-        params={"transition_label": transition_label, "families_metadata_file": str(metadata_file)},
+        params={
+            "transition_label": transition_label,
+            "families_metadata_file": str(metadata_file),
+            "families_file": str(args.families_file) if args.families_file else None,
+            "analysis_root": str(args.analysis_root),
+        },
         outputs=output_paths,
         description=f"Built baseline summary, chosen-model, and per-function features tables for transition '{transition_label}'",
-        notes="Includes baseline model comparison, family-level chosen-model metrics, and function-specific feature summary tables.",
+        notes=(
+                "Includes baseline model comparison, family-level chosen-model metrics, "
+                "and function-specific feature summary tables."
+                + (f"\nRun note: {args.log_note}" if args.log_note else "")
+        ),
         log_relative_path=Path(BASELINE_MODELS_LABEL) / f"{transition_label}.log",
     )
 

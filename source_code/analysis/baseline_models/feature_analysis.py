@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Generic H0-vs-H1 feature analysis for ChromEvol.
 

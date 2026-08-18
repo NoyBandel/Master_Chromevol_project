@@ -28,8 +28,8 @@ from source_code.logger import log_run
 
 
 # -------- loading --------
-def load_chosen_table(transition_label: str) -> pd.DataFrame:
-    chosen_file: Path = BASELINE_ANALYSIS_DIR / transition_label / f"{transition_label}_{CHOSEN_MODEL_SUFFIX}"
+def load_chosen_table(transition_label: str, analysis_root: Path) -> pd.DataFrame:
+    chosen_file: Path = analysis_root / transition_label / f"{transition_label}_{CHOSEN_MODEL_SUFFIX}"
 
     if not chosen_file.exists():
         raise FileNotFoundError(f"Missing chosen model table: {chosen_file}")
@@ -179,9 +179,9 @@ def plot_threshold_histograms(transition_label: str, out_dir: Path, chosen_no_ig
 
 
 # -------- main analysis --------
-def run_transition(transition_label: str) -> Dict[str, object]:
-    chosen_df: pd.DataFrame = load_chosen_table(transition_label)
-    out_dir: Path = BASELINE_ANALYSIS_DIR / transition_label / MODEL_SELECTION_SUBDIR
+def run_transition(transition_label: str, analysis_root: Path) -> Dict[str, object]:
+    chosen_df: pd.DataFrame = load_chosen_table(transition_label, analysis_root)
+    out_dir: Path = analysis_root / transition_label / MODEL_SELECTION_SUBDIR
     output_paths: List[str] = []
 
     ensure_dir(out_dir)
@@ -235,27 +235,36 @@ def run_transition(transition_label: str) -> Dict[str, object]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--transition", required=True, type=str, choices=list(LABEL_TRANSITIONS_ORDERED))
+    parser.add_argument("--analysis_root", type=Path, default=BASELINE_ANALYSIS_DIR, help="Root directory containing the baseline analysis tables and outputs.")
+    parser.add_argument("--log_note", type=str, default="", help="Optional note describing this analysis run.")
     return parser.parse_args()
 
 
 def main() -> None:
     args: argparse.Namespace = parse_args()
-    result: Dict[str, object] = run_transition(args.transition)
+    result: Dict[str, object] = run_transition(args.transition, args.analysis_root)
+
+    notes = "Created count tables, support count tables, chosen-model pies, aggregated Akaike-weight pie, and threshold-colored histograms."
+    if args.log_note:
+        notes += f"\nRun note: {args.log_note}"
 
     log_run(
         step="analysis",
         script=Path(__file__),
         params={
             "transition": result["transition"],
+            "analysis_root": str(args.analysis_root),
             "n_families_total": result["n_families_total"],
             "n_families_constant_vs_linear": result["n_families_constant_vs_linear"],
             "chosen_counts_all": result["chosen_counts_all"],
             "chosen_counts_no_ignore": result["chosen_counts_no_ignore"],
-            "aggregated_best_akaike_weights_no_ignore": result["aggregated_best_akaike_weights_no_ignore"],
+            "aggregated_best_akaike_weights_no_ignore": result[
+                "aggregated_best_akaike_weights_no_ignore"
+            ],
         },
         outputs=result["outputs"],
         description=f"Stage 1 model selection analysis for transition '{result['transition']}'",
-        notes="Created count tables, support count tables, chosen-model pies, aggregated Akaike-weight pie, and threshold-colored histograms.",
+        notes=notes,
         log_relative_path=Path(BASELINE_MODELS_LABEL) / f"{result['transition']}.log",
     )
 
