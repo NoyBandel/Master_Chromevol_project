@@ -31,6 +31,10 @@ from source_code.logger import log_run
 StatsRow = dict[str, Any]
 RunResult = dict[str, Any]
 
+PAIRED_RUNS_MODE = "paired_runs"
+H0_REFERENCE_BY_WINNER_MODE = "h0_reference_by_winner"
+INFERRED_FEATURE_MODES = (PAIRED_RUNS_MODE, H0_REFERENCE_BY_WINNER_MODE)
+
 
 @dataclass(frozen=True)
 class Comparison:
@@ -119,7 +123,7 @@ def pairwise_metrics(summary: pd.DataFrame, cmp: Comparison) -> pd.DataFrame:
 
 def prepare_analysis_tables(
     h0: pd.DataFrame, h1: pd.DataFrame, chosen: pd.DataFrame, pairwise: pd.DataFrame, cmp: Comparison
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     population = chosen[[core.FAMILY_NAME_COL, ac.CHOSEN_FUNCTION_LABEL_COL]].merge(
         pairwise, on=core.FAMILY_NAME_COL, how="left", validate="one_to_one"
     )
@@ -170,17 +174,31 @@ def prepare_analysis_tables(
     ].rename(columns={feature: f"{feature}__h1" for feature in ac.FEATURE_ANALYSIS_INFERRED_COLS})
     paired = paired_h0.merge(paired_h1, on=core.FAMILY_NAME_COL, validate="one_to_one")
 
-    return population, chosen_features, paired
+    h0_reference_features = h0.merge(
+        eligible, on=core.FAMILY_NAME_COL, how="inner", validate="one_to_one"
+    )
+
+    return population, chosen_features, paired, h0_reference_features
 
 
 def groups(
-    feature: str, chosen_features: pd.DataFrame, paired: pd.DataFrame, cmp: Comparison
+    feature: str,
+    chosen_features: pd.DataFrame,
+    paired: pd.DataFrame,
+    h0_reference_features: pd.DataFrame,
+    cmp: Comparison,
+    inferred_feature_mode: str,
 ) -> tuple[pd.Series, pd.Series]:
-    if feature in ac.FEATURE_ANALYSIS_INFERRED_COLS:
+    if feature in ac.FEATURE_ANALYSIS_INFERRED_COLS and inferred_feature_mode == PAIRED_RUNS_MODE:
         df = paired[[f"{feature}__h0", f"{feature}__h1"]].apply(pd.to_numeric, errors="coerce").dropna()
         return df.iloc[:, 0], df.iloc[:, 1]
 
-    df = chosen_features[[feature, ac.CHOSEN_FUNCTION_LABEL_COL]].copy()
+    source = (
+        h0_reference_features
+        if feature in ac.FEATURE_ANALYSIS_INFERRED_COLS
+        else chosen_features
+    )
+    df = source[[feature, ac.CHOSEN_FUNCTION_LABEL_COL]].copy()
     df[feature] = pd.to_numeric(df[feature], errors="coerce")
     df = df.dropna()
     h0 = df.loc[df[ac.CHOSEN_FUNCTION_LABEL_COL] == cmp.h0, feature]
@@ -200,10 +218,20 @@ def effect_size(h1: pd.Series, h0: pd.Series, paired: bool) -> float:
 
 
 def feature_stats(
-    feature: str, chosen_features: pd.DataFrame, paired_df: pd.DataFrame, cmp: Comparison
+    feature: str,
+    chosen_features: pd.DataFrame,
+    paired_df: pd.DataFrame,
+    h0_reference_features: pd.DataFrame,
+    cmp: Comparison,
+    inferred_feature_mode: str,
 ) -> StatsRow:
-    h0, h1 = groups(feature, chosen_features, paired_df, cmp)
-    is_paired = feature in ac.FEATURE_ANALYSIS_INFERRED_COLS
+    h0, h1 = groups(
+        feature, chosen_features, paired_df, h0_reference_features, cmp, inferred_feature_mode
+    )
+    is_paired = (
+        feature in ac.FEATURE_ANALYSIS_INFERRED_COLS
+        and inferred_feature_mode == PAIRED_RUNS_MODE
+    )
     mean_diff = (
         (h1 - h0).mean() if is_paired and len(h0)
         else h1.mean() - h0.mean() if len(h0) and len(h1)
@@ -211,7 +239,14 @@ def feature_stats(
     )
 
     row: StatsRow = {
-        "feature": feature, "comparison_type": "paired_inferred" if is_paired else "unpaired_metadata",
+        "feature": feature,
+        "comparison_type": (
+            "paired_inferred"
+            if is_paired
+            else "unpaired_h0_reference_by_winner"
+            if feature in ac.FEATURE_ANALYSIS_INFERRED_COLS
+            else "unpaired_metadata"
+        ),
         "h0_model": cmp.h0, "h1_model": cmp.h1, "n_h0": len(h0), "n_h1": len(h1),
         "n_pairs": len(h0) if is_paired else np.nan,
         "mean_h0": h0.mean() if len(h0) else np.nan, "mean_h1": h1.mean() if len(h1) else np.nan,
@@ -263,8 +298,11 @@ def plot_box_and_hist(
 ) -> list[Path]:
     colors, outputs = model_colors(cmp), []
 
-    fig, ax = plt.subplots(figsize=(9, 6))
-    ax.boxplot([h0, h1], tick_labels=[cmp.h0, cmp.h1])
+    fig, ax = plt.subplots(figsize=(6, 6))
+    box = ax.boxplot([h0, h1], tick_labels=[cmp.h0, cmp.h1], patch_artist=True)
+    for patch, label in zip(box["boxes"], [cmp.h0, cmp.h1]):
+        patch.set_facecolor(colors[label])
+        patch.set_alpha(0.7)
     ax.set(title=f"{feature}: H0 vs H1", ylabel=feature)
     add_text_box(ax, stats_text(row))
     path = out_dir / f"{feature}_boxplot.png"
@@ -272,7 +310,7 @@ def plot_box_and_hist(
 
     pooled = pd.concat([h0, h1], ignore_index=True)
     bins = 20 if pooled.nunique() > 20 else min(10, max(3, pooled.nunique()))
-    fig, ax = plt.subplots(figsize=(9, 6))
+    fig, ax = plt.subplots(figsize=(6, 6))
     ax.hist(h0, bins=bins, alpha=0.5, edgecolor="black", label=cmp.h0, color=colors[cmp.h0])
     ax.hist(h1, bins=bins, alpha=0.5, edgecolor="black", label=cmp.h1, color=colors[cmp.h1])
     ax.set(title=f"{feature}: H0 vs H1", xlabel=feature, ylabel="Number of families")
@@ -485,22 +523,39 @@ def plot_threshold(
 
 
 def analyze_feature(
-    feature: str, chosen_features: pd.DataFrame, paired: pd.DataFrame, cmp: Comparison, min_retained: int
+    feature: str,
+    chosen_features: pd.DataFrame,
+    paired: pd.DataFrame,
+    h0_reference_features: pd.DataFrame,
+    cmp: Comparison,
+    min_retained: int,
+    inferred_feature_mode: str,
 ) -> tuple[StatsRow, list[Path]]:
     out_dir = cmp.output_dir / feature
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    row = feature_stats(feature, chosen_features, paired, cmp)
-    h0, h1 = groups(feature, chosen_features, paired, cmp)
+    row = feature_stats(
+        feature, chosen_features, paired, h0_reference_features, cmp, inferred_feature_mode
+    )
+    h0, h1 = groups(
+        feature, chosen_features, paired, h0_reference_features, cmp, inferred_feature_mode
+    )
     outputs = plot_box_and_hist(feature, h0, h1, row, cmp, out_dir)
 
-    if feature not in ac.FEATURE_ANALYSIS_INFERRED_COLS:
-        scatter = plot_signed_delta(feature, chosen_features, cmp, out_dir)
+    feature_table = (
+        h0_reference_features
+        if feature in ac.FEATURE_ANALYSIS_INFERRED_COLS
+        and inferred_feature_mode == H0_REFERENCE_BY_WINNER_MODE
+        else chosen_features
+    )
+
+    if feature not in ac.FEATURE_ANALYSIS_INFERRED_COLS or inferred_feature_mode == H0_REFERENCE_BY_WINNER_MODE:
+        scatter = plot_signed_delta(feature, feature_table, cmp, out_dir)
         if scatter:
             outputs.append(scatter)
 
     for direction, suffix in [(ac.THRESHOLD_AT_OR_ABOVE, "threshold"), (ac.THRESHOLD_AT_OR_BELOW, "at_or_below_threshold")]:
-        scan = threshold_scan(feature, chosen_features, cmp, direction, min_retained)
+        scan = threshold_scan(feature, feature_table, cmp, direction, min_retained)
         csv_path = out_dir / f"{feature}_{suffix}_scan.csv"
         scan.to_csv(csv_path, index=False); outputs.append(csv_path)
         plot_path = plot_threshold(scan, feature, cmp, direction, out_dir)
@@ -510,19 +565,25 @@ def analyze_feature(
     return row, outputs
 
 
-def run(cmp: Comparison, min_retained: int) -> RunResult:
+def run(
+    cmp: Comparison, min_retained: int, inferred_feature_mode: str, features: list[str]
+) -> RunResult:
     cmp.output_dir.mkdir(parents=True, exist_ok=True)
     h0, h1, chosen, summary = load_inputs(cmp)
     pairwise = pairwise_metrics(summary, cmp)
-    population, chosen_features, paired = prepare_analysis_tables(h0, h1, chosen, pairwise, cmp)
+    population, chosen_features, paired, h0_reference_features = prepare_analysis_tables(
+        h0, h1, chosen, pairwise, cmp
+    )
 
     population_file = cmp.output_dir / f"{cmp.transition}_{cmp.label}_analysis_population.csv"
     population.to_csv(population_file, index=False)
     outputs: list[Path] = [population_file]
     stats_rows: list[StatsRow] = []
 
-    for feature in ac.FEATURE_ANALYSIS_COLS:
-        row, feature_outputs = analyze_feature(feature, chosen_features, paired, cmp, min_retained)
+    for feature in features:
+        row, feature_outputs = analyze_feature(
+            feature, chosen_features, paired, h0_reference_features, cmp, min_retained, inferred_feature_mode
+        )
         stats_rows.append(row); outputs.extend(feature_outputs)
 
     stats_file = cmp.output_dir / f"{cmp.transition}_{cmp.label}_feature_stats.csv"
@@ -545,6 +606,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--input-dir", required=True, type=Path)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--min-threshold-families", type=int, default=ac.DEFAULT_MIN_THRESHOLD_FAMILIES)
+    parser.add_argument(
+        "--inferred-feature-mode",
+        choices=INFERRED_FEATURE_MODES,
+        default=PAIRED_RUNS_MODE,
+        help=(
+            "How inferred features are compared. 'paired_runs' preserves the existing paired H0-vs-H1 "
+            "run comparison. 'h0_reference_by_winner' uses the H0-run value for every family and "
+            "compares H0-selected vs H1-selected families with an unpaired Welch test."
+        ),
+    )
+    parser.add_argument(
+        "--features",
+        nargs="+",
+        choices=ac.FEATURE_ANALYSIS_COLS,
+        help="Optional subset of features to analyze. Default: all feature-analysis columns.",
+    )
     parser.add_argument("--skip-log", action="store_true")
     return parser.parse_args()
 
@@ -552,13 +629,20 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     input_dir = args.input_dir.resolve()
+    comparison_label = f"{args.h0_function}_vs_{args.h1_function}"
+    default_output_name = (
+        comparison_label
+        if args.inferred_feature_mode == PAIRED_RUNS_MODE
+        else f"{comparison_label}_{args.inferred_feature_mode}"
+    )
     output_dir = (
         args.output_dir.resolve()
         if args.output_dir
-        else input_dir / ac.FEATURE_ANALYSIS_SUBDIR / f"{args.h0_function}_vs_{args.h1_function}"
+        else input_dir / ac.FEATURE_ANALYSIS_SUBDIR / default_output_name
     )
     cmp = Comparison(args.transition, args.h0_function, args.h1_function, input_dir, output_dir)
-    result = run(cmp, args.min_threshold_families)
+    features = args.features or list(ac.FEATURE_ANALYSIS_COLS)
+    result = run(cmp, args.min_threshold_families, args.inferred_feature_mode, features)
 
     print(f"[✓] Included families: {result['n_included']} / {result['n_total']}")
     print(f"[✓] Excluded families: {result['n_excluded']}")
@@ -574,6 +658,8 @@ def main() -> None:
                 "n_total": result["n_total"], "n_included": result["n_included"], "n_excluded": result["n_excluded"],
                 "n_h0": result["n_h0"], "n_h1": result["n_h1"],
                 "min_threshold_families": args.min_threshold_families,
+                "inferred_feature_mode": args.inferred_feature_mode,
+                "features": features,
                 "saturation_tolerance_pp": ac.SATURATION_TOLERANCE_PP, "saturation_min_points": ac.SATURATION_MIN_POINTS,
                 "candidate_min_h1_gain_pp": ac.CANDIDATE_MIN_H1_GAIN_PP, "candidate_min_strong_h1_gain_pp": ac.CANDIDATE_MIN_STRONG_H1_GAIN_PP,
                 "candidate_max_future_gain_pp": ac.CANDIDATE_MAX_FUTURE_GAIN_PP, "candidate_min_retained_pct": ac.CANDIDATE_MIN_RETAINED_PCT,
@@ -581,10 +667,23 @@ def main() -> None:
             outputs=result["outputs"],
             description=f"Feature analysis for {cmp.transition}: {cmp.h0} vs {cmp.h1}.",
             notes=(
-                "Non-H0/H1 global winners excluded. Metadata features use unpaired winner-group comparisons; "
-                "inferred features use paired H0/H1 runs. >= scans mark 50% H1; <= scans mark saturation."
+                "Non-H0/H1 global winners excluded. Metadata features use unpaired winner-group comparisons. "
+                + (
+                    "Inferred features use paired H0/H1 runs. "
+                    if args.inferred_feature_mode == PAIRED_RUNS_MODE
+                    else "Inferred features use the H0-run value for every family and compare H0-selected vs H1-selected families. "
+                )
+                + ">= scans mark an empirical candidate cutoff; <= scans mark saturation."
             ),
-            log_relative_path=Path("feature_analysis") / cmp.transition / f"{cmp.label}.log",
+            log_relative_path=(
+                Path("feature_analysis")
+                / cmp.transition
+                / (
+                    f"{cmp.label}.log"
+                    if args.inferred_feature_mode == PAIRED_RUNS_MODE
+                    else f"{cmp.label}_{args.inferred_feature_mode}.log"
+                )
+            ),
         )
 
 
