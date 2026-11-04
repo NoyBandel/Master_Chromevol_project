@@ -196,16 +196,24 @@ MODEL_SELECTION_SUBDIR: str = "model_selection"
 POSITIVE_SLOPE_LABEL: str = "positive"
 NEGATIVE_SLOPE_LABEL: str = "negative"
 
+# MODEL_COLOR_MAP: Dict[str, str] = {
+#     LABEL_CONSTANT: "#4C72B0",   # muted blue
+#     LABEL_LINEAR: "#DD8452",     # muted orange
+#     LABEL_EXP: "#55A868",        # muted green
+#     LABEL_IGNORE: "#C7C7C7",     # light grey
+# }
+
+## for poster:
 MODEL_COLOR_MAP: Dict[str, str] = {
-    LABEL_CONSTANT: "#4C72B0",   # muted blue
-    LABEL_LINEAR: "#DD8452",     # muted orange
-    LABEL_EXP: "#55A868",        # muted green
+    LABEL_CONSTANT: "#8A8A8A",  # H0: no dependence
+    LABEL_LINEAR: "#1F4E79",    # H1: linear dependence
+    LABEL_EXP: "#4DBBD5",       # H1: exponential dependence
     LABEL_IGNORE: "#C7C7C7",     # light grey
 }
 
 SLOPE_SIGN_COLOR_MAP = {
-    NEGATIVE_SLOPE_LABEL: "#7A5195",  # purple
-    POSITIVE_SLOPE_LABEL: "#2A9D8F",  # teal
+    POSITIVE_SLOPE_LABEL: "#EDC353",
+    NEGATIVE_SLOPE_LABEL: "#B090E0",
 }
 
 DELTA_SUPPORT_CLASS_COLOR_MAP: Dict[int, str] = {

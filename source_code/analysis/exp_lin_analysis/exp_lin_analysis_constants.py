@@ -128,7 +128,6 @@ SIGN_AGREEMENT_ORDER: tuple[str, ...] = (
 )
 
 SIGN_AGREEMENT_COLOR_MAP: dict[str, str] = {
-    SIGN_AGREEMENT_LABEL: "#2A9D8F",
-    SIGN_DISAGREEMENT_LABEL: "#E76F51",
-    SIGN_MISSING_LABEL: "#9E9E9E",
+    SIGN_AGREEMENT_LABEL: "#76C7B7",      # light teal
+    SIGN_DISAGREEMENT_LABEL: "#C86B98",   # muted rose
 }

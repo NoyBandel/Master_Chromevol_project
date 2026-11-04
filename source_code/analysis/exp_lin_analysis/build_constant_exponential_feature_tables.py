@@ -208,7 +208,37 @@ def build_candidate_summary(
     baseline_rows: pd.DataFrame,
     exponential_rows: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Combine constant, exponential, and ignore into one long table."""
+    """
+    Combine constant, exponential, and ignore into one long table.
+
+    The baseline table defines the analysis population. Exponential rows are
+    therefore restricted to exactly those families before the candidate tables
+    are combined.
+    """
+    baseline_families = set(
+        baseline_rows[core.FAMILY_NAME_COL].dropna().astype(str)
+    )
+
+    exponential_rows = exponential_rows[
+        exponential_rows[core.FAMILY_NAME_COL]
+        .astype(str)
+        .isin(baseline_families)
+    ].copy()
+
+    exponential_families = set(
+        exponential_rows[core.FAMILY_NAME_COL].dropna().astype(str)
+    )
+
+    missing_exponential = sorted(
+        baseline_families - exponential_families
+    )
+
+    if missing_exponential:
+        raise ValueError(
+            "Filtered baseline families missing exponential results: "
+            f"{missing_exponential}"
+        )
+
     summary_df = pd.concat(
         [baseline_rows, exponential_rows],
         ignore_index=True,
@@ -220,19 +250,29 @@ def build_candidate_summary(
         [core.FAMILY_NAME_COL, core.LABEL_FUNC_TYPE_COL],
         keep=False,
     )
+
     if duplicates.any():
         duplicate_rows = summary_df.loc[
             duplicates,
-            [core.FAMILY_NAME_COL, core.LABEL_FUNC_TYPE_COL, core.CONFIG_COL],
+            [
+                core.FAMILY_NAME_COL,
+                core.LABEL_FUNC_TYPE_COL,
+                core.CONFIG_COL,
+            ],
         ]
+
         raise ValueError(
             "Expected one row per family/model, but found duplicates:\n"
             f"{duplicate_rows.head(20).to_string(index=False)}"
         )
 
-    return summary_df.sort_values(
-        [core.FAMILY_NAME_COL, core.LABEL_FUNC_TYPE_COL]
-    ).reset_index(drop=True)
+    return (
+        summary_df
+        .sort_values(
+            [core.FAMILY_NAME_COL, core.LABEL_FUNC_TYPE_COL]
+        )
+        .reset_index(drop=True)
+    )
 
 
 def build_completeness_report(summary_df: pd.DataFrame) -> pd.DataFrame:
@@ -598,36 +638,36 @@ def main() -> None:
     print(f"[✓] Excluded incomplete families: {result['n_excluded_families']}")
     print(f"[✓] Chosen-model counts: {result['chosen_counts']}")
 
-    # log_run(
-    #     step="analysis",
-    #     script=Path(__file__),
-    #     params={
-    #         "transition_label": transition,
-    #         "comparison": COMPARISON_NAME,
-    #         "candidate_models": list(CANDIDATE_MODELS),
-    #         "baseline_models_summary_file": str(baseline_file),
-    #         "exponential_parsed_results_file": str(exponential_file),
-    #         "families_metadata_file": str(args.families_metadata_file),
-    #         "n_candidate_families": result["n_candidate_families"],
-    #         "n_complete_families": result["n_complete_families"],
-    #         "n_excluded_families": result["n_excluded_families"],
-    #         "chosen_counts": result["chosen_counts"],
-    #     },
-    #     outputs=result["outputs"],
-    #     description=(
-    #         "Built constant-vs-exponential feature-analysis inputs for "
-    #         f"transition '{transition}'."
-    #     ),
-    #     notes=(
-    #         "Model selection includes constant, exponential, and ignore. "
-    #         "Only families with valid AICc for all three models are included."
-    #     ),
-    #     log_relative_path=(
-    #         Path("exponential_vs_linear")
-    #         / transition
-    #         / f"{COMPARISON_NAME}_feature_inputs.log"
-    #     ),
-    # )
+    log_run(
+        step="analysis",
+        script=Path(__file__),
+        params={
+            "transition_label": transition,
+            "comparison": COMPARISON_NAME,
+            "candidate_models": list(CANDIDATE_MODELS),
+            "baseline_models_summary_file": str(baseline_file),
+            "exponential_parsed_results_file": str(exponential_file),
+            "families_metadata_file": str(args.families_metadata_file),
+            "n_candidate_families": result["n_candidate_families"],
+            "n_complete_families": result["n_complete_families"],
+            "n_excluded_families": result["n_excluded_families"],
+            "chosen_counts": result["chosen_counts"],
+        },
+        outputs=result["outputs"],
+        description=(
+            "Built constant-vs-exponential feature-analysis inputs for "
+            f"transition '{transition}'."
+        ),
+        notes=(
+            "Model selection includes constant, exponential, and ignore. "
+            "Only families with valid AICc for all three models are included."
+        ),
+        log_relative_path=(
+            Path("exponential_vs_linear")
+            / transition
+            / f"{COMPARISON_NAME}_feature_inputs.log"
+        ),
+    )
 
 
 if __name__ == "__main__":
