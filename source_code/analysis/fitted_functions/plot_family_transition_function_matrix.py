@@ -487,7 +487,7 @@ def plot_not_retained(ax):
     ax.text(
         0.5,
         0.5,
-        "Not retained",
+        "Not analyzed",
         transform=ax.transAxes,
         ha="center",
         va="center",
